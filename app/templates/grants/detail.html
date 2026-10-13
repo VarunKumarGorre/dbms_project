@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Grant {{ data.grant.grant_number }}{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <a href="{{ url_for('grants.index') }}">Grants</a>
+  <span class="separator">/</span>
+  <span class="current">{{ data.grant.grant_number }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <div style="display: flex; align-items: center; gap: var(--s3); margin-bottom: 4px;">
+      <h1>Grant <code>{{ data.grant.grant_number }}</code></h1>
+      {{ ui.badge(data.grant.status, data.grant.status) }}
+      {{ ui.badge(data.kpis.health_class, data.kpis.health_class) }}
+    </div>
+    <p class="text-muted small">
+      Project: <a href="{{ url_for('projects.detail', id=data.grant.project_id) }}"><code>{{ data.grant.project_code }}</code></a> ({{ data.grant.project_title }}) &middot;
+      Agency: <strong>{{ data.grant.agency_name }}</strong> &middot;
+      {{ data.grant.grant_start | date_short }} – {{ data.grant.grant_end | date_short }}
+    </p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{{ url_for('expenditure.statement', grant_id=data.grant.grant_id) }}" class="btn btn-secondary btn-sm">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#receipt"/></svg>
+      View Statement
+    </a>
+    {% if session.get('role') in ['ADMIN', 'RESEARCH_OFFICER'] and data.grant.status == 'Active' %}
+    <a href="{{ url_for('expenditure.new_expense', grant_id=data.grant.grant_id) }}" class="btn btn-primary btn-sm">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#plus"/></svg>
+      Record expense
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="dashboard-kpis">
+  {{ ui.kpi_card("Sanctioned Amount", data.kpis.amount, 'Sanctioned ' ~ (data.grant.sanction_date | date_short), 'wallet', is_money=true) }}
+  <div class="kpi-card">
+    <div class="kpi-header"><span class="kpi-label">Total Spent</span></div>
+    <div class="kpi-val">{{ data.kpis.spent | inr_compact }}</div>
+    <div class="kpi-sub">{{ ui.progress_bar(data.kpis.used_pct, data.kpis.health_class) }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-header"><span class="kpi-label">Remaining Balance</span></div>
+    <div class="kpi-val" style="color: {{ 'var(--danger)' if data.kpis.balance <= 0 else 'var(--text)' }};">
+      {{ data.kpis.balance | inr_compact }}
+    </div>
+    <div class="kpi-sub">{{ (100 - data.kpis.used_pct) | round(1) }}% unspent</div>
+  </div>
+</div>
+
+<!-- Budget Allocations Table -->
+<div class="card" style="margin-bottom: var(--s5);">
+  <div class="card-header">
+    <h2 class="card-title">Budget Allocation by Head</h2>
+  </div>
+  <div class="table-container" style="border: none; box-shadow: none;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Budget Head</th>
+          <th class="text-right">Allocated (INR)</th>
+          <th class="text-right">Spent (INR)</th>
+          <th class="text-right">Remaining (INR)</th>
+          <th style="min-width: 140px;">Utilization</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in data.allocations %}
+        <tr>
+          <td class="font-bold">{{ a.head_name }}</td>
+          <td class="text-right tabular-nums">{{ a.allocated | inr }}</td>
+          <td class="text-right tabular-nums">{{ a.spent | inr }}</td>
+          <td class="text-right tabular-nums font-bold" style="color: {{ 'var(--danger)' if a.remaining <= 0 else 'var(--text)' }};">
+            {{ a.remaining | inr }}
+          </td>
+          <td>{{ ui.progress_bar(a.spent_pct) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Expenditures Table -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Recent Expenditures</h2>
+    <a href="{{ url_for('expenditure.statement', grant_id=data.grant.grant_id) }}" class="small" style="font-weight: 600;">Full statement &rarr;</a>
+  </div>
+  {% if data.expenditures %}
+  <div class="table-container" style="border: none; box-shadow: none;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Voucher No</th>
+          <th>Budget Head</th>
+          <th>Description</th>
+          <th class="text-right">Debit (INR)</th>
+          <th>Recorded By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for exp in data.expenditures[:10] %}
+        <tr>
+          <td>{{ exp.expense_date | date_short }}</td>
+          <td><code>{{ exp.voucher_no }}</code></td>
+          <td class="font-bold">{{ exp.head_name }}</td>
+          <td>{{ exp.description }}</td>
+          <td class="text-right tabular-nums font-bold">{{ exp.amount | inr }}</td>
+          <td class="small text-muted">{{ exp.recorded_by }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ ui.empty_state("No expenses recorded", "Expenses recorded against this grant will appear here.", "receipt") }}
+  {% endif %}
+</div>
+{% endblock %}

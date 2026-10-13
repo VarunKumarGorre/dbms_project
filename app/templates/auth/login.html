@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% set no_shell = true %}
+
+{% block title %}Sign In{% endblock %}
+
+{% block content %}
+<div class="login-page">
+  <!-- Brand Panel -->
+  <div class="login-brand-panel">
+    <div style="display: flex; align-items: center; gap: var(--s3);">
+      <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="RPGMS Logo" style="width: 40px; height: 40px;">
+      <h2 style="font-size: 20px; font-weight: 700; color: #fff;">RPGMS</h2>
+    </div>
+
+    <div>
+      <h1 class="display" style="color: #fff; margin-bottom: var(--s4); max-width: 440px;">
+        Every project, grant and publication in one place.
+      </h1>
+      <div style="display: flex; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s6);">
+        <span style="background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;">Track budgets</span>
+        <span style="background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;">Watch deadlines</span>
+        <span style="background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;">Measure output</span>
+      </div>
+      <img src="{{ url_for('static', filename='img/login-art.svg') }}" alt="Dashboard Illustration" style="max-width: 100%; border-radius: 12px;">
+    </div>
+
+    <div style="font-size: 12px; color: rgba(255,255,255,0.7);">
+      &copy; University Research Office — Authorized personnel only.
+    </div>
+  </div>
+
+  <!-- Login Form Panel -->
+  <div class="login-form-panel">
+    <div class="login-card">
+      <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 4px;">Welcome back</h2>
+      <p class="text-muted small" style="margin-bottom: var(--s5);">Sign in to continue to your dashboard</p>
+
+      <form action="{{ url_for('auth.login') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ return_to }}">
+
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <input type="text" class="input" id="username" name="username" required autofocus placeholder="Enter your username" autocomplete="username">
+        </div>
+
+        <div class="form-group" style="position: relative;">
+          <label class="form-label" for="password">Password</label>
+          <div style="position: relative;">
+            <input type="password" class="input" id="password" name="password" required placeholder="Enter password" autocomplete="current-password" style="padding-right: 40px; width: 100%;">
+            <button type="button" id="toggle-pwd-btn" aria-label="Toggle password visibility" style="position: absolute; right: 10px; top: 10px; background: none; border: none; cursor: pointer; color: var(--text-muted);">
+              <svg class="icon" style="width: 18px; height: 18px;"><use href="{{ url_for('static', filename='img/icons.svg') }}#info"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: var(--s3); height: 42px;">
+          Sign in
+        </button>
+      </form>
+
+      {% if is_demo %}
+      <div class="demo-accounts-box">
+        <details>
+          <summary style="font-size: 12.5px; font-weight: 600; cursor: pointer; color: var(--text-muted);">
+            Demo Accounts (Password: <code>password123</code>)
+          </summary>
+          <div style="margin-top: var(--s2); font-size: 12px; line-height: 1.6;">
+            <div><strong>ADMIN:</strong> <code>admin</code></div>
+            <div><strong>RESEARCH_OFFICER:</strong> <code>officer</code></div>
+            <div><strong>PI:</strong> <code>pi_rao</code>, <code>pi_menon</code>, <code>pi_sharma</code></div>
+            <div><strong>VIEWER:</strong> <code>viewer</code></div>
+          </div>
+        </details>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const pwdInput = document.getElementById("password");
+  const toggleBtn = document.getElementById("toggle-pwd-btn");
+  if (toggleBtn && pwdInput) {
+    toggleBtn.addEventListener("click", () => {
+      pwdInput.type = pwdInput.type === "password" ? "text" : "password";
+    });
+  }
+</script>
+{% endblock %}

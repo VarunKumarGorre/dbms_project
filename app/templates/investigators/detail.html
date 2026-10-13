@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}{{ data.researcher.full_name }} — Investigator{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <a href="{{ url_for('investigators.index') }}">Investigators</a>
+  <span class="separator">/</span>
+  <span class="current">{{ data.researcher.full_name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <div style="display: flex; align-items: center; gap: var(--s3); margin-bottom: 4px;">
+      <h1>{{ data.researcher.full_name }}</h1>
+      {{ ui.badge('Active' if data.researcher.is_active else 'Inactive', 'success' if data.researcher.is_active else 'neutral') }}
+    </div>
+    <p class="text-muted small">
+      {{ data.researcher.designation }} &middot; {{ data.researcher.dept_name }} &middot;
+      {{ data.researcher.email }}
+      {% if data.researcher.orcid %}&middot; ORCID: <code>{{ data.researcher.orcid }}</code>{% endif %}
+    </p>
+  </div>
+  {% if role in ['ADMIN', 'RESEARCH_OFFICER'] %}
+  <div class="page-header-actions">
+    <a href="{{ url_for('investigators.edit_researcher', id=data.researcher.researcher_id) }}" class="btn btn-secondary btn-sm">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#edit"/></svg>
+      Edit profile
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Workload Summary Card -->
+<div class="card" style="margin-bottom: var(--s5);">
+  <div class="card-header">
+    <h2 class="card-title">Operational Workload Commitment</h2>
+    <span style="font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums;">
+      {{ data.workload_percent }}% of 100%
+    </span>
+  </div>
+  <div style="margin-bottom: var(--s4);">
+    {{ ui.progress_bar(data.workload_percent) }}
+  </div>
+  <p class="small text-muted">
+    Total effort across proposed and active projects. System enforces a strict 100% capacity threshold (BR-11).
+  </p>
+</div>
+
+<!-- Assigned Projects Table -->
+<div class="card" style="margin-bottom: var(--s5);">
+  <div class="card-header">
+    <h2 class="card-title">Assigned Projects</h2>
+  </div>
+  {% if data.projects %}
+  <div class="table-container" style="border: none; box-shadow: none;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Project Code</th>
+          <th>Title</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th class="text-right">Effort (%)</th>
+          <th>Assigned Since</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in data.projects %}
+        <tr>
+          <td>
+            <a href="{{ url_for('projects.detail', id=p.project_id) }}"><code>{{ p.project_code }}</code></a>
+          </td>
+          <td class="font-bold">{{ p.title }}</td>
+          <td>{{ ui.badge(p.role, 'primary' if p.role == 'PI' else 'neutral') }}</td>
+          <td>{{ ui.badge(p.status, p.status) }}</td>
+          <td class="text-right tabular-nums font-bold">{{ p.effort_percent }}%</td>
+          <td>{{ p.assigned_date | date_short }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ ui.empty_state("No project assignments", "This researcher is not currently assigned to any projects.", "folder") }}
+  {% endif %}
+</div>
+
+<!-- Publications & Patents Output Split -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s5);">
+  <!-- Publications -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Publications ({{ data.publications | length }})</h2>
+    </div>
+    {% if data.publications %}
+    <div style="display: flex; flex-direction: column; gap: var(--s3);">
+      {% for pub in data.publications %}
+      <div style="padding-bottom: var(--s3); border-bottom: 1px solid var(--border);">
+        <a href="{{ url_for('publications.detail', id=pub.publication_id) }}" style="font-weight: 600; font-size: 13.5px;">{{ pub.title }}</a>
+        <div class="small text-muted" style="margin-top: 2px;">
+          {{ pub.venue }} &middot; {{ pub.publication_date | date_short }}
+          {% if pub.is_corresponding %}&middot; <span style="color: var(--primary); font-weight: 600;">Corresponding Author</span>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      {{ ui.empty_state("No publications recorded", "Scholarly publications will appear here.", "book") }}
+    {% endif %}
+  </div>
+
+  <!-- Patents -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Patents ({{ data.patents | length }})</h2>
+    </div>
+    {% if data.patents %}
+    <div style="display: flex; flex-direction: column; gap: var(--s3);">
+      {% for pat in data.patents %}
+      <div style="padding-bottom: var(--s3); border-bottom: 1px solid var(--border);">
+        <a href="{{ url_for('patents.detail', id=pat.patent_id) }}" style="font-weight: 600; font-size: 13.5px;">{{ pat.title }}</a>
+        <div class="small text-muted" style="margin-top: 2px;">
+          App #: <code>{{ pat.application_number }}</code> &middot; {{ ui.badge(pat.status, pat.status) }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      {{ ui.empty_state("No patents recorded", "Filed and granted patents will appear here.", "award") }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

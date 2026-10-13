@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}System Audit Log{% endblock %}
+
+{% block content %}
+<div class="admin-audit-page">
+  <div class="page-header">
+    <div class="page-header-left">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+        <span class="separator">/</span>
+        <span class="current" aria-current="page">Admin Administration</span>
+      </nav>
+      <h1>Users &amp; Audit Log</h1>
+      <p class="text-muted small">Comprehensive forensic audit trail recording table mutations, actors, and state diffs.</p>
+    </div>
+  </div>
+
+  <!-- Admin Navigation Tabs -->
+  <div class="tabs" style="margin-bottom: var(--s5);">
+    <a href="{{ url_for('admin.users') }}" class="tab-item">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#users"/></svg>
+      <span>User Accounts</span>
+    </a>
+    <a href="{{ url_for('admin.audit') }}" class="tab-item active">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#shield"/></svg>
+      <span>Audit Log</span>
+    </a>
+  </div>
+
+  <!-- Filter Controls Bar -->
+  <div class="card" style="margin-bottom: var(--s5);">
+    <form method="GET" action="{{ url_for('admin.audit') }}" class="filter-bar" style="border-bottom: none; padding: 0;">
+      <div class="filter-group">
+        <label for="filter-table" class="sr-only">Table</label>
+        <select id="filter-table" name="table" class="form-control form-control-sm">
+          <option value="">All Tables</option>
+          {% for t in tables %}
+          <option value="{{ t }}" {% if filters.table == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="filter-action" class="sr-only">Action</label>
+        <select id="filter-action" name="action" class="form-control form-control-sm">
+          <option value="">All Actions</option>
+          {% for a in actions %}
+          <option value="{{ a }}" {% if filters.action == a %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="filter-record-id" class="sr-only">Record ID</label>
+        <input type="text" id="filter-record-id" name="record_id" class="form-control form-control-sm" placeholder="Record ID" value="{{ filters.record_id }}" style="width: 110px;">
+      </div>
+
+      <div class="filter-group">
+        <label for="filter-from-date" class="sr-only">From Date</label>
+        <input type="date" id="filter-from-date" name="from_date" class="form-control form-control-sm" value="{{ filters.from_date }}" title="From Date">
+      </div>
+
+      <div class="filter-group">
+        <label for="filter-to-date" class="sr-only">To Date</label>
+        <input type="date" id="filter-to-date" name="to_date" class="form-control form-control-sm" value="{{ filters.to_date }}" title="To Date">
+      </div>
+
+      <div style="display: flex; gap: var(--s2); margin-left: auto;">
+        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+        <a href="{{ url_for('admin.audit') }}" class="btn btn-secondary btn-sm">Reset</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Audit Entries Table -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Audit Trail Entries</h2>
+      <span class="text-muted small">Showing {{ logs | length }} of {{ total }} records</span>
+    </div>
+
+    {% if logs %}
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Table</th>
+            <th>Record ID</th>
+            <th>Action</th>
+            <th>Actor</th>
+            <th class="text-right">Change Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in logs %}
+          <tr>
+            <td class="text-muted small font-mono">
+              {{ item.changed_at | string | truncate(19, true, '') }}
+            </td>
+            <td>
+              <code>{{ item.table_name }}</code>
+            </td>
+            <td>
+              <code>#{{ item.record_id }}</code>
+            </td>
+            <td>
+              {% if item.action == 'INSERT' %}
+                <span class="badge badge-success"><span class="badge-dot-indicator"></span>INSERT</span>
+              {% elif item.action == 'UPDATE' %}
+                <span class="badge badge-info"><span class="badge-dot-indicator"></span>UPDATE</span>
+              {% elif item.action == 'DELETE' %}
+                <span class="badge badge-danger"><span class="badge-dot-indicator"></span>DELETE</span>
+              {% else %}
+                <span class="badge badge-neutral">{{ item.action }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                {{ ui.avatar(item.changed_by, 22) }}
+                <span>{{ item.changed_by }}</span>
+              </div>
+            </td>
+            <td class="text-right">
+              <button type="button" class="btn btn-secondary btn-sm" onclick='showDiffModal({{ item | tojson }})'>
+                <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#search"/></svg>
+                <span>View Diff</span>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    {% if total_pages > 1 %}
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--s4) var(--s5); border-top: 1px solid var(--border);">
+      <span class="text-muted small">Page {{ page }} of {{ total_pages }}</span>
+      <div style="display: flex; gap: var(--s2);">
+        {% if page > 1 %}
+        <a href="{{ url_for('admin.audit', page=page-1, table=filters.table, action=filters.action, record_id=filters.record_id, from_date=filters.from_date, to_date=filters.to_date) }}" class="btn btn-secondary btn-sm">
+          &larr; Previous
+        </a>
+        {% endif %}
+        {% if page < total_pages %}
+        <a href="{{ url_for('admin.audit', page=page+1, table=filters.table, action=filters.action, record_id=filters.record_id, from_date=filters.from_date, to_date=filters.to_date) }}" class="btn btn-secondary btn-sm">
+          Next &rarr;
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+      {{ ui.empty_state("No audit records found", "No database modification log matched your filter criteria.", "shield") }}
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal: Forensic Diff Inspector -->
+<dialog id="diffModal" class="modal" style="max-width: 720px; width: 90%;">
+  <div class="modal-box" style="max-width: 100%;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="diffModalTitle">Audit Change Diff</h3>
+      <button type="button" class="btn-icon" onclick="document.getElementById('diffModal').close()" aria-label="Close">
+        <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#x"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="diffModalContent" style="max-height: 480px; overflow-y: auto;">
+      <!-- Populated via JavaScript -->
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('diffModal').close()">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  function showDiffModal(item) {
+    const title = document.getElementById('diffModalTitle');
+    const content = document.getElementById('diffModalContent');
+    title.innerHTML = `Audit #${item.log_id} &mdash; <code>${item.table_name}</code> #${item.record_id} (${item.action})`;
+
+    let html = `
+      <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: var(--s4); padding-bottom: var(--s3); border-bottom: 1px solid var(--border);">
+        <div><strong>Actor:</strong> ${item.changed_by}</div>
+        <div><strong>Timestamp:</strong> ${item.changed_at}</div>
+      </div>
+    `;
+
+    if (item.action === 'UPDATE' && item.diffs && item.diffs.length > 0) {
+      html += `
+        <h4 style="font-size: 14px; margin-bottom: var(--s2);">Modified Attributes</h4>
+        <div class="table-container">
+          <table class="diff-table">
+            <thead>
+              <tr>
+                <th style="width: 25%;">Field</th>
+                <th style="width: 37%;">Old Value</th>
+                <th style="width: 38%;">New Value</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      item.diffs.forEach(d => {
+        const oldStr = d.old !== null && d.old !== undefined ? JSON.stringify(d.old) : '<null>';
+        const newStr = d.new !== null && d.new !== undefined ? JSON.stringify(d.new) : '<null>';
+        html += `
+          <tr>
+            <td><strong>${d.field}</strong></td>
+            <td class="diff-old">${escapeHtml(oldStr)}</td>
+            <td class="diff-new">${escapeHtml(newStr)}</td>
+          </tr>
+        `;
+      });
+      html += `</tbody></table></div>`;
+    } else if (item.action === 'INSERT') {
+      html += `
+        <h4 style="font-size: 14px; margin-bottom: var(--s2);">Created Snapshot</h4>
+        <pre style="background: var(--surface-2); padding: var(--s3); border-radius: var(--radius-sm); font-size: 12.5px; overflow-x: auto;"><code>${escapeHtml(JSON.stringify(item.new_data, null, 2))}</code></pre>
+      `;
+    } else if (item.action === 'DELETE') {
+      html += `
+        <h4 style="font-size: 14px; margin-bottom: var(--s2);">Deleted Snapshot</h4>
+        <pre style="background: var(--surface-2); padding: var(--s3); border-radius: var(--radius-sm); font-size: 12.5px; overflow-x: auto;"><code>${escapeHtml(JSON.stringify(item.old_data, null, 2))}</code></pre>
+      `;
+    } else {
+      html += `<p class="text-muted">No state delta available for this record.</p>`;
+    }
+
+    content.innerHTML = html;
+    document.getElementById('diffModal').showModal();
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+</script>
+{% endblock %}

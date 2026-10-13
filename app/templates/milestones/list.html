@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Milestones{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <span class="current">Milestones</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Milestones</h1>
+    <p class="text-muted small">Deliverables, deadlines and progress monitoring across projects</p>
+  </div>
+  <div class="page-header-actions">
+    <div class="segmented-control">
+      <a href="{{ url_for('milestones.index', view='table', **filters) }}" class="segmented-btn {% if view_mode == 'table' %}active{% endif %}">Table</a>
+      <a href="{{ url_for('milestones.index', view='timeline', **filters) }}" class="segmented-btn {% if view_mode == 'timeline' %}active{% endif %}">Timeline</a>
+    </div>
+    {% if role in ['ADMIN', 'RESEARCH_OFFICER', 'PI'] %}
+    <button type="button" class="btn btn-primary btn-sm" data-modal-open="new-milestone-modal">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#plus"/></svg>
+      New milestone
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" action="{{ url_for('milestones.index') }}" class="filter-bar">
+  <input type="hidden" name="view" value="{{ view_mode }}">
+  <div style="flex: 1; min-width: 200px; position: relative;">
+    <svg class="icon" style="position: absolute; left: 10px; top: 10px; color: var(--text-muted);"><use href="{{ url_for('static', filename='img/icons.svg') }}#search"/></svg>
+    <input type="text" name="q" value="{{ filters.q }}" class="input" style="padding-left: 36px; width: 100%;" placeholder="Search milestone title...">
+  </div>
+
+  <select name="project_id" class="select" onchange="this.form.submit()">
+    <option value="">All Projects</option>
+    {% for p in projects %}
+    <option value="{{ p.project_id }}" {% if filters.project_id == p.project_id|string %}selected{% endif %}>{{ p.project_code }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="status" class="select" onchange="this.form.submit()">
+    <option value="All" {% if filters.status == 'All' %}selected{% endif %}>All Statuses</option>
+    <option value="Pending" {% if filters.status == 'Pending' %}selected{% endif %}>Pending</option>
+    <option value="In Progress" {% if filters.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+    <option value="Completed" {% if filters.status == 'Completed' %}selected{% endif %}>Completed</option>
+    <option value="Delayed" {% if filters.status == 'Delayed' %}selected{% endif %}>Delayed</option>
+  </select>
+
+  <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; cursor: pointer;">
+    <input type="checkbox" name="overdue" value="1" {% if filters.overdue_only %}checked{% endif %} onchange="this.form.submit()">
+    Overdue only
+  </label>
+
+  <a href="{{ url_for('milestones.index', view=view_mode) }}" class="btn btn-ghost btn-sm">Clear filters</a>
+</form>
+
+<!-- VIEW MODE: TABLE -->
+{% if view_mode == 'table' %}
+  {% if milestones %}
+  <div class="table-container">
+    <table class="table">
+      <thead>
+        <tr>
+          <th><a href="{{ url_for('milestones.index', view='table', sort='title', dir='desc' if sort_key == 'title' and sort_dir == 'asc' else 'asc', **filters) }}">Milestone</a></th>
+          <th><a href="{{ url_for('milestones.index', view='table', sort='project', dir='desc' if sort_key == 'project' and sort_dir == 'asc' else 'asc', **filters) }}">Project</a></th>
+          <th><a href="{{ url_for('milestones.index', view='table', sort='due_date', dir='desc' if sort_key == 'due_date' and sort_dir == 'asc' else 'asc', **filters) }}">Due Date</a></th>
+          <th><a href="{{ url_for('milestones.index', view='table', sort='status', dir='desc' if sort_key == 'status' and sort_dir == 'asc' else 'asc', **filters) }}">Status</a></th>
+          <th>Days Late</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in milestones %}
+        <tr style="background: {{ 'var(--danger-soft)' if m.is_overdue else 'transparent' }};">
+          <td>
+            <div style="font-weight: 600;">{{ m.title }}</div>
+            <div class="small text-muted">{{ m.description or 'No description' }}</div>
+          </td>
+          <td><a href="{{ url_for('projects.detail', id=m.project_id) }}"><code>{{ m.project_code }}</code></a></td>
+          <td style="color: {{ 'var(--danger)' if m.is_overdue else 'var(--text)' }}; font-weight: {{ '700' if m.is_overdue else '400' }};">
+            {{ m.due_date | date_short }}
+          </td>
+          <td>{{ ui.badge(m.status, m.status) }}</td>
+          <td>
+            {% if m.is_overdue %}
+            <span style="color: var(--danger); font-weight: 700;">{{ m.days_late }} days</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if m.status != 'Completed' and role in ['ADMIN', 'RESEARCH_OFFICER', 'PI'] %}
+            <form action="{{ url_for('milestones.complete', id=m.milestone_id) }}" method="POST" style="display: inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="completed_date" value="{{ None | date_short }}">
+              <button type="submit" class="btn btn-secondary btn-sm">Mark done</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ ui.pagination(page, total_pages, total, page_size, url_for('milestones.index', view='table', sort=sort_key, dir=sort_dir, **filters) ~ '&') }}
+  {% else %}
+    {{ ui.empty_state("No milestones due", "You're all caught up with deadlines.", "flag", url_for('milestones.index'), "Clear filters") }}
+  {% endif %}
+
+<!-- VIEW MODE: TIMELINE (Gantt-lite) -->
+{% else %}
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Milestone Schedule Timeline</h2>
+      <div style="display: flex; gap: var(--s3); font-size: 12px;">
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--success); display: inline-block;"></span> Completed</span>
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--danger); display: inline-block;"></span> Overdue</span>
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary); display: inline-block;"></span> Upcoming</span>
+      </div>
+    </div>
+
+    {% if timeline_projects %}
+    <div class="timeline-board">
+      {% for tp in timeline_projects %}
+      <div class="timeline-row">
+        <div class="timeline-project-info">
+          <a href="{{ url_for('projects.detail', id=tp.project_id) }}" style="font-weight: 700;"><code>{{ tp.project_code }}</code></a>
+          <div class="small text-muted" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ tp.project_title }}</div>
+        </div>
+        <div class="timeline-track-area">
+          {% for m in tp.milestones %}
+          <div class="timeline-pin {{ 'completed' if m.status == 'Completed' else ('overdue' if m.is_overdue else 'pending') }}"
+               style="left: {{ [5, (loop.index0 * 18) + 10] | max }}%;"
+               title="{{ m.title }} (Due: {{ m.due_date | date_short }})"></div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      {{ ui.empty_state("No timeline projects", "No projects found matching the filter criteria.", "flag") }}
+    {% endif %}
+  </div>
+{% endif %}
+
+<!-- New Milestone Modal -->
+<div class="modal-backdrop" id="new-milestone-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title">New Milestone</h3>
+      <button type="button" class="btn-icon" data-modal-close aria-label="Close modal"><svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#x"/></svg></button>
+    </div>
+    <form action="{{ url_for('milestones.new_milestone') }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Project <span class="req">*</span></label>
+          <select name="project_id" id="ms-project-select" class="select" required>
+            <option value="">-- Select Project --</option>
+            {% for p in projects %}
+            <option value="{{ p.project_id }}" data-start="{{ p.start_date }}" data-end="{{ p.end_date }}">{{ p.project_code }} — {{ p.title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Title <span class="req">*</span></label>
+          <input type="text" name="title" class="input" required placeholder="Milestone title">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Due Date <span class="req">*</span></label>
+          <input type="date" name="due_date" id="ms-due-date-input" class="input" required>
+          <span class="field-help" id="ms-date-help">Due date must fall inside the selected project's schedule (BR-04).</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select name="status" class="select">
+            <option value="Pending">Pending</option>
+            <option value="In Progress">In Progress</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="textarea" placeholder="Deliverables and verification criteria..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Create Milestone</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const projSelect = document.getElementById("ms-project-select");
+    const dueInp = document.getElementById("ms-due-date-input");
+    const dateHelp = document.getElementById("ms-date-help");
+
+    if (projSelect && dueInp) {
+      projSelect.addEventListener("change", () => {
+        const opt = projSelect.options[projSelect.selectedIndex];
+        if (opt && opt.dataset.start && opt.dataset.end) {
+          dueInp.min = opt.dataset.start;
+          dueInp.max = opt.dataset.end;
+          dateHelp.textContent = `Date must be between ${opt.dataset.start} and ${opt.dataset.end} (BR-04)`;
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

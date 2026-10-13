@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Projects{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <span class="current">Projects</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Projects</h1>
+    <p class="text-muted small">All research projects across departments</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{{ url_for('projects.index', format='csv', **filters) }}" class="btn btn-secondary btn-sm">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#download"/></svg>
+      Export CSV
+    </a>
+    {% if session.get('role') in ['ADMIN', 'RESEARCH_OFFICER'] %}
+    <a href="{{ url_for('projects.new_project') }}" class="btn btn-primary btn-sm">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#plus"/></svg>
+      New project
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" action="{{ url_for('projects.index') }}" class="filter-bar">
+  <div style="flex: 1; min-width: 220px; position: relative;">
+    <svg class="icon" style="position: absolute; left: 10px; top: 10px; color: var(--text-muted);"><use href="{{ url_for('static', filename='img/icons.svg') }}#search"/></svg>
+    <input type="text" name="q" value="{{ filters.q }}" class="input" style="padding-left: 36px; width: 100%;" placeholder="Search title, code, keyword...">
+  </div>
+
+  <select name="dept_id" class="select" onchange="this.form.submit()">
+    <option value="">All Departments</option>
+    {% for d in departments %}
+    <option value="{{ d.dept_id }}" {% if filters.dept_id == d.dept_id|string %}selected{% endif %}>{{ d.dept_name }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="year" class="select" onchange="this.form.submit()">
+    <option value="">All Years</option>
+    {% for y in years %}
+    <option value="{{ y }}" {% if filters.year == y|string %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="status" class="select" onchange="this.form.submit()">
+    <option value="All" {% if filters.status == 'All' %}selected{% endif %}>All Statuses</option>
+    <option value="Active" {% if filters.status == 'Active' %}selected{% endif %}>Active</option>
+    <option value="Proposed" {% if filters.status == 'Proposed' %}selected{% endif %}>Proposed</option>
+    <option value="On Hold" {% if filters.status == 'On Hold' %}selected{% endif %}>On Hold</option>
+    <option value="Completed" {% if filters.status == 'Completed' %}selected{% endif %}>Completed</option>
+    <option value="Cancelled" {% if filters.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+  </select>
+
+  <a href="{{ url_for('projects.index') }}" class="btn btn-ghost btn-sm">Clear filters</a>
+</form>
+
+<!-- Projects Table -->
+{% if projects %}
+<div class="table-container">
+  <table class="table">
+    <thead>
+      <tr>
+        <th><a href="{{ url_for('projects.index', sort='code', dir='desc' if sort_key == 'code' and sort_dir == 'asc' else 'asc', **filters) }}">Code</a></th>
+        <th><a href="{{ url_for('projects.index', sort='title', dir='desc' if sort_key == 'title' and sort_dir == 'asc' else 'asc', **filters) }}">Title & Dept</a></th>
+        <th>Principal Investigator</th>
+        <th><a href="{{ url_for('projects.index', sort='status', dir='desc' if sort_key == 'status' and sort_dir == 'asc' else 'asc', **filters) }}">Status</a></th>
+        <th><a href="{{ url_for('projects.index', sort='period', dir='desc' if sort_key == 'period' and sort_dir == 'asc' else 'asc', **filters) }}">Period</a></th>
+        <th class="text-right"><a href="{{ url_for('projects.index', sort='funding', dir='desc' if sort_key == 'funding' and sort_dir == 'asc' else 'asc', **filters) }}">Funding</a></th>
+        <th style="min-width: 140px;">Spent</th>
+        <th>Milestones</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in projects %}
+      <tr onclick="window.location='{{ url_for('projects.detail', id=p.project_id) }}';" style="cursor: pointer;">
+        <td class="font-bold"><code>{{ p.project_code }}</code></td>
+        <td>
+          <div style="font-weight: 600;">{{ p.title }}</div>
+          <div class="small text-muted">{{ p.dept_name }}</div>
+        </td>
+        <td>
+          <div style="display: flex; align-items: center; gap: var(--s2);">
+            {{ ui.avatar(p.pi_name, 26) }}
+            <span>{{ p.pi_name }}</span>
+          </div>
+        </td>
+        <td>{{ ui.badge(p.status, p.status) }}</td>
+        <td>
+          <div style="font-size: 12px; margin-bottom: 2px;">{{ p.start_date | date_short }} – {{ p.end_date | date_short }}</div>
+          <div style="width: 100px; height: 4px; background: var(--neutral-soft); border-radius: 2px; overflow: hidden;">
+            <div style="height: 100%; width: {{ p.time_pct }}%; background: var(--primary);"></div>
+          </div>
+        </td>
+        <td class="text-right font-bold tabular-nums">{{ p.total_funding | inr_compact }}</td>
+        <td>
+          <div style="font-size: 11px; margin-bottom: 2px; display: flex; justify-content: space-between;">
+            <span>{{ p.total_spent | inr_compact }}</span>
+            <span>{{ p.spent_pct }}%</span>
+          </div>
+          {{ ui.progress_bar(p.spent_pct, show_label=false) }}
+        </td>
+        <td>
+          <span style="font-weight: 600;">{{ p.milestones_done }} / {{ p.milestones_total }}</span>
+          {% if p.overdue_count > 0 %}
+          <span style="background: var(--danger-soft); color: var(--danger-ink); padding: 1px 6px; border-radius: 999px; font-size: 11px; font-weight: 700; margin-left: 4px;">
+            {{ p.overdue_count }} late
+          </span>
+          {% endif %}
+        </td>
+        <td onclick="event.stopPropagation();">
+          <div style="position: relative;">
+            <a href="{{ url_for('projects.detail', id=p.project_id) }}" class="btn btn-ghost btn-sm" aria-label="View details">
+              <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#chevron-right"/></svg>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{{ ui.pagination(page, total_pages, total, page_size, url_for('projects.index', sort=sort_key, dir=sort_dir, **filters) ~ '&') }}
+
+{% else %}
+  {{ ui.empty_state("No projects match your filters", "Try adjusting or clearing your active filters.", "folder", url_for('projects.index'), "Clear filters") }}
+{% endif %}
+{% endblock %}

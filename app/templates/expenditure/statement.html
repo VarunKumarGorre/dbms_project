@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Statement of Expenditure — {{ statement.grant.grant_number }}{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <a href="{{ url_for('expenditure.index') }}">Expenditure</a>
+  <span class="separator">/</span>
+  <span class="current">Statement &middot; {{ statement.grant.grant_number }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Statement of Expenditure</h1>
+    <p class="text-muted small">
+      Grant: <strong>{{ statement.grant.grant_number }}</strong> &middot;
+      Project: <a href="{{ url_for('projects.detail', id=statement.grant.project_id) }}"><code>{{ statement.grant.project_code }}</code></a> ({{ statement.grant.project_title }}) &middot;
+      Agency: {{ statement.grant.agency_name }}
+    </p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{{ url_for('expenditure.statement', grant_id=statement.grant.grant_id, format='csv', from_date=from_date, to_date=to_date) }}" class="btn btn-secondary btn-sm">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#download"/></svg>
+      Export CSV
+    </a>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="window.print();">
+      Print Statement
+    </button>
+  </div>
+</div>
+
+<!-- Summary Tiles -->
+<div class="dashboard-kpis" style="grid-template-columns: repeat(3, 1fr);">
+  {{ ui.kpi_card("Sanctioned Capital", statement.grant_amount, 'Total approved grant', 'wallet', is_money=true) }}
+  {{ ui.kpi_card("Total Disbursed", statement.total_spent, 'Vouchers cleared', 'receipt', is_money=true) }}
+  <div class="kpi-card">
+    <div class="kpi-header"><span class="kpi-label">Remaining Balance</span></div>
+    <div class="kpi-val" style="color: {{ 'var(--danger)' if statement.final_balance <= 0 else 'var(--text)' }};">
+      {{ statement.final_balance | inr_compact }}
+    </div>
+    <div class="kpi-sub">Available funds</div>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" action="{{ url_for('expenditure.statement', grant_id=statement.grant.grant_id) }}" class="filter-bar">
+  <div style="display: flex; align-items: center; gap: var(--s2);">
+    <label class="small text-muted">From:</label>
+    <input type="date" name="from_date" value="{{ from_date }}" class="input" style="max-width: 150px;">
+    <label class="small text-muted">To:</label>
+    <input type="date" name="to_date" value="{{ to_date }}" class="input" style="max-width: 150px;">
+    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+  </div>
+  <a href="{{ url_for('expenditure.statement', grant_id=statement.grant.grant_id) }}" class="btn btn-ghost btn-sm">Reset</a>
+</form>
+
+<!-- Running Balance Table -->
+{% if statement.transactions %}
+<div class="table-container">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Voucher No</th>
+        <th>Budget Head</th>
+        <th>Description</th>
+        <th class="text-right">Debit (INR)</th>
+        <th class="text-right">Running Balance (INR)</th>
+        <th>Recorded By</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tx in statement.transactions %}
+      <tr>
+        <td>{{ tx.expense_date | date_short }}</td>
+        <td><code>{{ tx.voucher_no }}</code></td>
+        <td class="font-bold">{{ tx.head_name }}</td>
+        <td>{{ tx.description }}</td>
+        <td class="text-right tabular-nums font-bold">{{ tx.amount | inr }}</td>
+        <td class="text-right tabular-nums font-bold" style="color: {{ 'var(--danger)' if tx.running_balance <= 0 else 'var(--primary)' }};">
+          {{ tx.running_balance | inr }}
+        </td>
+        <td class="small text-muted">{{ tx.recorded_by }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4" class="text-right">Total Disbursed:</td>
+        <td class="text-right tabular-nums">{{ statement.total_spent | inr }}</td>
+        <td class="text-right tabular-nums">{{ statement.final_balance | inr }}</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+{% else %}
+  {{ ui.empty_state("No transactions recorded", "No expenditures found for this date range.", "receipt") }}
+{% endif %}
+{% endblock %}

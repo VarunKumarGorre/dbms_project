@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <span class="current">Dashboard</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Dashboard</h1>
+    <p class="text-muted small">Overview of projects, funding and deadlines</p>
+  </div>
+  <div class="page-header-actions">
+    <span class="small text-muted" style="margin-right: var(--s2);">Updated just now</span>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="location.reload();">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#calendar"/></svg>
+      Refresh
+    </button>
+  </div>
+</div>
+
+<!-- 5 KPI Cards Row -->
+<div class="dashboard-kpis">
+  {{ ui.kpi_card("Active Projects", data.kpis.active_projects, (data.kpis.total_projects ~ ' total'), 'folder') }}
+  {{ ui.kpi_card("Sanctioned Funding", data.kpis.total_sanctioned, (data.kpis.agencies_count ~ ' agencies'), 'wallet', is_money=true) }}
+  {{ ui.kpi_card("Spent to Date", data.kpis.total_spent, (data.kpis.spent_pct ~ '% of fund'), 'receipt', is_money=true) }}
+  <div class="kpi-card" style="border-left: 4px solid var(--danger);">
+    <div class="kpi-header">
+      <span class="kpi-label">Overdue Milestones</span>
+      <div class="kpi-icon-chip" style="background: var(--danger-soft); color: var(--danger);">
+        <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#flag"/></svg>
+      </div>
+    </div>
+    <div class="kpi-val" style="color: var(--danger);">{{ data.kpis.overdue_milestones }}</div>
+    <div class="kpi-sub">in {{ data.kpis.overdue_projects_count }} projects</div>
+  </div>
+  {{ ui.kpi_card("Publications This Year", data.kpis.pubs_this_year, (data.kpis.pubs_all_time ~ ' all-time'), 'book') }}
+</div>
+
+<!-- Row 1: Funding vs Spending by Agency (8) & Budget Health (4) -->
+<div class="dashboard-row-8-4">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Funding vs Spending by Agency</h2>
+    </div>
+    <div style="height: 280px; position: relative;">
+      <canvas id="agencyChart" aria-label="Funding vs spending by agency chart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Budget Health</h2>
+    </div>
+    <div style="height: 280px; position: relative;">
+      <canvas id="healthChart" aria-label="Budget health breakdown chart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Row 2: Overdue Milestones & Grants Near Limit -->
+<div class="dashboard-row-7-5">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Overdue Milestones</h2>
+      {% if role != 'VIEWER' %}
+      <a href="{{ url_for('milestones.index', overdue=1) }}" class="small" style="font-weight: 600;">View all &rarr;</a>
+      {% endif %}
+    </div>
+    {% if data.overdue_milestones %}
+    <div class="table-container" style="border: none; box-shadow: none;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Milestone</th>
+            <th>Project</th>
+            <th>Due Date</th>
+            <th>Days Late</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ms in data.overdue_milestones %}
+          <tr style="background: var(--danger-soft);">
+            <td class="font-bold">{{ ms.title }}</td>
+            <td>
+              {% if role != 'VIEWER' %}
+              <a href="{{ url_for('projects.detail', id=ms.project_id) }}"><code>{{ ms.project_code }}</code></a>
+              {% else %}
+              <code>{{ ms.project_code }}</code>
+              {% endif %}
+            </td>
+            <td>{{ ms.due_date | date_short }}</td>
+            <td style="color: var(--danger); font-weight: 700;">{{ ms.days_late }} days</td>
+            <td>{{ ui.badge(ms.status, 'warning') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      {{ ui.empty_state("No overdue milestones", "All scheduled project deadlines are on track.", "flag") }}
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Grants Near Limit</h2>
+      {% if role != 'VIEWER' %}
+      <a href="{{ url_for('grants.index', health='Near Limit') }}" class="small" style="font-weight: 600;">View all &rarr;</a>
+      {% endif %}
+    </div>
+    {% if data.near_limit_grants %}
+    <div style="display: flex; flex-direction: column; gap: var(--s4);">
+      {% for g in data.near_limit_grants %}
+      <div>
+        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 4px;">
+          <span>
+            {% if role != 'VIEWER' %}
+            <a href="{{ url_for('grants.detail', id=g.grant_id) }}"><code>{{ g.project_code }}</code></a>
+            {% else %}
+            <code>{{ g.project_code }}</code>
+            {% endif %}
+            &middot; <span class="text-muted">{{ g.agency_code }}</span>
+          </span>
+          <span>{{ g.spent_amount | inr_compact }} / {{ g.grant_amount | inr_compact }}</span>
+        </div>
+        {{ ui.progress_bar(g.utilization_pct, g.health) }}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      {{ ui.empty_state("No high utilization grants", "All active grants are within safe financial margins.", "wallet") }}
+    {% endif %}
+  </div>
+</div>
+
+<!-- Row 3: Recent Activity (ADMIN only) & Publications per Year -->
+<div class="dashboard-row-7-5">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Recent Activity</h2>
+      {% if role == 'ADMIN' %}
+      <a href="{{ url_for('admin.audit') }}" class="small" style="font-weight: 600;">Full audit log &rarr;</a>
+      {% endif %}
+    </div>
+    {% if role == 'ADMIN' and data.recent_activity %}
+    <div style="display: flex; flex-direction: column; gap: var(--s3);">
+      {% for act in data.recent_activity %}
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+        <div style="display: flex; align-items: center; gap: var(--s3);">
+          {{ ui.avatar(act.changed_by, 28) }}
+          <div>
+            <div style="font-size: 13px; font-weight: 500;">
+              <strong>{{ act.changed_by }}</strong> performed <code>{{ act.action }}</code> on <code>{{ act.table_name }}</code> #{{ act.record_id }}
+            </div>
+          </div>
+        </div>
+        <div class="small text-muted">{{ act.changed_at | date_rel }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">
+        Activity feed is active. Audit logs are recorded for all operations.
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Publications per Year</h2>
+    </div>
+    <div style="height: 260px; position: relative;">
+      <canvas id="pubsYearChart" aria-label="Publications per year chart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script id="dashboard-json-data" type="application/json">
+  {{ data | tojson }}
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const rawEl = document.getElementById("dashboard-json-data");
+    if (!rawEl) return;
+    const dashData = JSON.parse(rawEl.textContent);
+
+    // 1. Agency Chart
+    RPGMSCharts.register("agencyChart", (colors) => {
+      const ctx = document.getElementById("agencyChart");
+      if (!ctx) return null;
+      return new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: dashData.agency_chart.labels,
+          datasets: [
+            {
+              label: "Sanctioned (INR)",
+              data: dashData.agency_chart.sanctioned,
+              backgroundColor: colors.primary,
+              borderRadius: 6
+            },
+            {
+              label: "Spent (INR)",
+              data: dashData.agency_chart.spent,
+              backgroundColor: colors.secondary,
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "y",
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ₹ ${ctx.raw.toLocaleString("en-IN")}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: colors.border },
+              ticks: {
+                color: colors.textMuted,
+                callback: (v) => "₹ " + (v >= 10000000 ? (v/10000000).toFixed(1) + " Cr" : (v >= 100000 ? (v/100000).toFixed(1) + " L" : v))
+              }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: colors.text }
+            }
+          }
+        }
+      });
+    });
+
+    // 2. Budget Health Doughnut Chart
+    RPGMSCharts.register("healthChart", (colors) => {
+      const ctx = document.getElementById("healthChart");
+      if (!ctx) return null;
+      return new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: dashData.health_chart.labels,
+          datasets: [{
+            data: dashData.health_chart.counts,
+            backgroundColor: [colors.info, colors.success, colors.warning, colors.danger],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom" }
+          },
+          cutout: "70%"
+        }
+      });
+    });
+
+    // 3. Publications per Year Stacked Column
+    RPGMSCharts.register("pubsYearChart", (colors) => {
+      const ctx = document.getElementById("pubsYearChart");
+      if (!ctx) return null;
+      const palette = [colors.primary, colors.success, colors.warning, colors.info];
+      const datasets = dashData.pubs_year_chart.datasets.map((ds, idx) => ({
+        ...ds,
+        backgroundColor: palette[idx % palette.length],
+        borderRadius: 4
+      }));
+
+      return new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: dashData.pubs_year_chart.years,
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { color: colors.text } },
+            y: { stacked: true, grid: { color: colors.border }, ticks: { color: colors.textMuted, stepSize: 1 } }
+          },
+          plugins: {
+            legend: { position: "bottom" }
+          }
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

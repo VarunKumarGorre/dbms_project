@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Add Publication{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <a href="{{ url_for('publications.index') }}">Publications</a>
+  <span class="separator">/</span>
+  <span class="current">New publication</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<form action="{{ url_for('publications.new_publication') }}" method="POST" id="publication-form" class="warn-unsaved">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Add research publication</h1>
+      <p class="text-muted small">Record verified journal article, book chapter or conference paper</p>
+    </div>
+    <div class="page-header-actions">
+      <a href="{{ url_for('publications.index') }}" class="btn btn-secondary btn-sm">Cancel</a>
+      <button type="submit" class="btn btn-primary btn-sm">Save publication</button>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 7fr 5fr; gap: var(--s5);">
+    <!-- Left Column: Details & Authors -->
+    <div style="display: flex; flex-direction: column; gap: var(--s5);">
+      <!-- Publication Details -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Publication Details</h2>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="title">Title <span class="req">*</span></label>
+          <input type="text" name="title" id="title" class="input" required placeholder="Full title of paper">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4);">
+          <div class="form-group">
+            <label class="form-label" for="publication_type">Type <span class="req">*</span></label>
+            <select name="publication_type" id="publication_type" class="select" required>
+              <option value="Journal">Journal</option>
+              <option value="Conference">Conference</option>
+              <option value="Book Chapter">Book Chapter</option>
+              <option value="Patent">Patent Paper</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="indexing">Indexing</label>
+            <select name="indexing" id="indexing" class="select">
+              <option value="SCIE">SCIE</option>
+              <option value="Scopus">Scopus</option>
+              <option value="UGC-CARE">UGC-CARE</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--s4);">
+          <div class="form-group">
+            <label class="form-label" for="venue">Venue (Journal / Conference) <span class="req">*</span></label>
+            <input type="text" name="venue" id="venue" class="input" required placeholder="e.g. IEEE Transactions on Software Engineering">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="issn_isbn">ISSN / ISBN</label>
+            <input type="text" name="issn_isbn" id="issn_isbn" class="input" placeholder="0098-5589">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4);">
+          <div class="form-group">
+            <label class="form-label" for="pub-doi-input">DOI</label>
+            <input type="text" name="doi" id="pub-doi-input" class="input" placeholder="10.1109/TSE.2024.1234567" style="font-family: var(--font-mono);">
+            <span class="field-error" id="pub-doi-warning" style="display: none;"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="publication_date">Publication Date <span class="req">*</span></label>
+            <input type="date" name="publication_date" id="publication_date" class="input" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- Authors Repeater -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Authors</h2>
+            <span class="small text-muted">Author order determines formal attribution (BR-18)</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-add-author">+ Add author</button>
+        </div>
+
+        <div id="authors-list">
+          <!-- Initial Author Row -->
+          <div class="author-row" style="display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s2); padding: var(--s2); background: var(--surface-2); border-radius: var(--radius-sm);">
+            <span class="author-order-label" style="font-weight: 700; width: 24px;">1</span>
+            <div style="flex: 1;">
+              <input type="text" class="input researcher-typeahead-input" placeholder="Search researcher by name..." required autocomplete="off">
+              <input type="hidden" name="author_ids[]" class="author-id-hidden">
+            </div>
+            <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;">
+              <input type="checkbox" name="is_corresponding[]" value="1" checked> Corr.
+            </label>
+            <button type="button" class="btn btn-ghost btn-sm btn-remove-author" title="Remove author">
+              <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#trash"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Linked Projects -->
+    <div>
+      <div class="card" style="position: sticky; top: 80px;">
+        <div class="card-header">
+          <h2 class="card-title">Linked Projects</h2>
+        </div>
+        <p class="small text-muted" style="margin-bottom: var(--s4);">
+          Link research projects that funded or facilitated this publication. Publication date cannot predate project start (BR-16).
+        </p>
+
+        <div class="form-group">
+          <label class="form-label" for="project-search-input">Add Project</label>
+          <input type="text" class="input" id="project-search-input" placeholder="Type project code..." autocomplete="off">
+        </div>
+
+        <div id="linked-projects-chips" style="display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s3);">
+          {% if preselected_project %}
+          <div class="project-chip" data-id="{{ preselected_project.project_id }}" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--surface-2); border-radius: var(--radius-sm); border: 1px solid var(--border);">
+            <div>
+              <span class="font-bold"><code>{{ preselected_project.project_code }}</code></span>
+              <div class="small text-muted">{{ preselected_project.title }}</div>
+            </div>
+            <input type="hidden" name="linked_project_ids[]" value="{{ preselected_project.project_id }}">
+            <button type="button" class="btn-icon" onclick="this.closest('.project-chip').remove();" style="width: 24px; height: 24px;">
+              <svg class="icon" style="width: 14px; height: 14px;"><use href="{{ url_for('static', filename='img/icons.svg') }}#x"/></svg>
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pages/publication_form.js') }}"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const projSearch = document.getElementById("project-search-input");
+    const chipsContainer = document.getElementById("linked-projects-chips");
+
+    if (projSearch && chipsContainer) {
+      new Typeahead(projSearch, {
+        endpoint: (q) => `/api/projects/search?q=${encodeURIComponent(q)}`,
+        onSelect: (p) => {
+          // Check if already added
+          if (chipsContainer.querySelector(`[data-id="${p.id}"]`)) return;
+
+          const chip = document.createElement("div");
+          chip.className = "project-chip";
+          chip.dataset.id = p.id;
+          chip.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--surface-2); border-radius: var(--radius-sm); border: 1px solid var(--border);";
+          chip.innerHTML = `
+            <div>
+              <span class="font-bold"><code>${p.code}</code></span>
+              <div class="small text-muted">${p.title}</div>
+            </div>
+            <input type="hidden" name="linked_project_ids[]" value="${p.id}">
+            <button type="button" class="btn-icon" onclick="this.closest('.project-chip').remove();" style="width: 24px; height: 24px;">
+              <svg class="icon" style="width: 14px; height: 14px;"><use href="/static/img/icons.svg#x"/></svg>
+            </button>
+          `;
+          chipsContainer.appendChild(chip);
+          projSearch.value = "";
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

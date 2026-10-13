@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Register Project{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <a href="{{ url_for('projects.index') }}">Projects</a>
+  <span class="separator">/</span>
+  <span class="current">New project</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<form action="{{ url_for('projects.new_project') }}" method="POST" id="register-project-form" class="warn-unsaved">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Register a project</h1>
+      <p class="text-muted small">Create a new institutional research project</p>
+    </div>
+    <div class="page-header-actions">
+      <a href="{{ url_for('projects.index') }}" class="btn btn-secondary btn-sm">Cancel</a>
+      <button type="submit" class="btn btn-primary btn-sm" id="btn-submit-project">Register</button>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 8fr 4fr; gap: var(--s5);">
+    <!-- Left Form Sections -->
+    <div style="display: flex; flex-direction: column; gap: var(--s5);">
+      <!-- 1 Basic Information -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">1. Basic Information</h2>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="project_code">Project Code <span class="req">*</span></label>
+          <input type="text" class="input" id="project_code" name="project_code" required placeholder="RP-2026-001" pattern="^RP-[0-9]{4}-[0-9]{3}$" style="max-width: 240px; font-family: var(--font-mono);">
+          <span class="field-help">Format: RP-YYYY-NNN (e.g. RP-2026-016)</span>
+          <span class="field-error" id="code-unique-error" style="display: none;">This project code already exists.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="title">Title <span class="req">*</span></label>
+          <input type="text" class="input" id="title" name="title" required placeholder="Full title of the research project">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="dept_id">Department <span class="req">*</span></label>
+          <select name="dept_id" id="dept_id" class="select" required style="max-width: 320px;">
+            <option value="">-- Select department --</option>
+            {% for d in departments %}
+            <option value="{{ d.dept_id }}">{{ d.dept_name }} ({{ d.dept_code }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="abstract">Abstract</label>
+          <textarea name="abstract" id="abstract" class="textarea" maxlength="2000" data-counter="abstract-counter" placeholder="Project description and scope..."></textarea>
+          <div style="display: flex; justify-content: flex-end;">
+            <span class="small text-muted" id="abstract-counter">0/2000</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2 Schedule -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">2. Schedule</h2>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4);">
+          <div class="form-group">
+            <label class="form-label" for="start_date">Start Date <span class="req">*</span></label>
+            <input type="date" class="input" id="start_date" name="start_date" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="end_date">End Date <span class="req">*</span></label>
+            <input type="date" class="input" id="end_date" name="end_date" required>
+          </div>
+        </div>
+        <div id="duration-chip" style="font-size: 13px; font-weight: 600; color: var(--primary); display: none;"></div>
+      </div>
+
+      <!-- 3 Principal Investigator -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">3. Principal Investigator</h2>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="pi_name_input">Principal Investigator (PI) <span class="req">*</span></label>
+          <input type="text" class="input" id="pi_name_input" placeholder="Type researcher name..." required autocomplete="off">
+          <input type="hidden" name="pi_res_id" id="pi_res_id">
+          <span class="field-help">Only active researchers may be assigned as PI (BR-12)</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pi_effort">PI Effort on this Project (%) <span class="req">*</span></label>
+          <div style="display: flex; align-items: center; gap: var(--s3);">
+            <input type="range" id="pi_effort_slider" min="1" max="100" value="25" style="flex: 1;">
+            <input type="number" class="input" id="pi_effort" name="pi_effort" min="1" max="100" value="25" required style="width: 80px; text-align: right;">
+          </div>
+          <span class="field-error" id="pi-workload-error" style="display: none;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sticky Summary -->
+    <div>
+      <div class="card" style="position: sticky; top: 80px;">
+        <h3 style="margin-bottom: var(--s3);">Summary</h3>
+        <div style="display: flex; flex-direction: column; gap: var(--s3); font-size: 13px; border-bottom: 1px solid var(--border); padding-bottom: var(--s4); margin-bottom: var(--s4);">
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">Code:</span>
+            <span class="font-bold" id="sum-code">—</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">Duration:</span>
+            <span id="sum-duration">—</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">PI:</span>
+            <span class="font-bold" id="sum-pi">—</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">Status:</span>
+            {{ ui.badge("Proposed", "neutral") }}
+          </div>
+        </div>
+
+        <h3 style="font-size: 13px; margin-bottom: var(--s2);">Rules Checked</h3>
+        <div style="display: flex; flex-direction: column; gap: var(--s2); font-size: 12.5px;">
+          <div id="chk-rule-dates" style="display: flex; align-items: center; gap: 6px; color: var(--text-muted);">
+            <span>&bull;</span> End date after start date (BR-01)
+          </div>
+          <div id="chk-rule-code" style="display: flex; align-items: center; gap: 6px; color: var(--text-muted);">
+            <span>&bull;</span> Code is unique
+          </div>
+          <div id="chk-rule-pi" style="display: flex; align-items: center; gap: 6px; color: var(--text-muted);">
+            <span>&bull;</span> PI is active (BR-12)
+          </div>
+          <div id="chk-rule-workload" style="display: flex; align-items: center; gap: 6px; color: var(--text-muted);">
+            <span>&bull;</span> Total effort &le; 100% (BR-11)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const codeInp = document.getElementById("project_code");
+    const startInp = document.getElementById("start_date");
+    const endInp = document.getElementById("end_date");
+    const piNameInp = document.getElementById("pi_name_input");
+    const piIdInp = document.getElementById("pi_res_id");
+    const slider = document.getElementById("pi_effort_slider");
+    const effortInp = document.getElementById("pi_effort");
+
+    const sumCode = document.getElementById("sum-code");
+    const sumDuration = document.getElementById("sum-duration");
+    const sumPi = document.getElementById("sum-pi");
+    const chkDates = document.getElementById("chk-rule-dates");
+    const chkCode = document.getElementById("chk-rule-code");
+    const chkPi = document.getElementById("chk-rule-pi");
+    const chkWorkload = document.getElementById("chk-rule-workload");
+    const workloadErr = document.getElementById("pi-workload-error");
+
+    let currentPiWorkload = 0;
+
+    // Typeahead for PI
+    new Typeahead(piNameInp, {
+      endpoint: (q) => `/api/researchers/search?q=${encodeURIComponent(q)}&active=1`,
+      targetIdInput: piIdInp,
+      onSelect: (item) => {
+        sumPi.textContent = item.name;
+        chkPi.style.color = "var(--success)";
+        chkPi.innerHTML = `<span style="color:var(--success); font-weight:bold;">&check;</span> PI is active (BR-12)`;
+        fetchWorkload(item.id);
+      }
+    });
+
+    async function fetchWorkload(resId) {
+      if (!resId) return;
+      try {
+        const res = await fetch(`/api/researchers/${resId}/workload`);
+        if (!res.ok) return;
+        const d = await res.json();
+        currentPiWorkload = d.current_percent || 0;
+        validateEffort();
+      } catch (e) {}
+    }
+
+    function validateEffort() {
+      const added = parseFloat(effortInp.value) || 0;
+      const tot = currentPiWorkload + added;
+      if (tot > 100) {
+        workloadErr.style.display = "block";
+        workloadErr.textContent = `Current workload is ${currentPiWorkload}%. Adding ${added}% totals ${tot}%, exceeding 100% (BR-11)`;
+        chkWorkload.style.color = "var(--danger)";
+      } else {
+        workloadErr.style.display = "none";
+        chkWorkload.style.color = "var(--success)";
+        chkWorkload.innerHTML = `<span style="color:var(--success); font-weight:bold;">&check;</span> Total effort &le; 100% (${tot}%) (BR-11)`;
+      }
+    }
+
+    slider.addEventListener("input", () => {
+      effortInp.value = slider.value;
+      validateEffort();
+    });
+    effortInp.addEventListener("input", () => {
+      slider.value = effortInp.value;
+      validateEffort();
+    });
+
+    codeInp.addEventListener("input", () => {
+      sumCode.textContent = codeInp.value || "—";
+    });
+
+    function updateDates() {
+      if (startInp.value && endInp.value) {
+        const s = new Date(startInp.value);
+        const e = new Date(endInp.value);
+        if (e > s) {
+          const diffMo = Math.round((e - s) / (1000 * 60 * 60 * 24 * 30.4));
+          const yrs = Math.floor(diffMo / 12);
+          const mos = diffMo % 12;
+          const durStr = `${yrs > 0 ? yrs + ' yrs ' : ''}${mos} mos`;
+          sumDuration.textContent = durStr;
+          chkDates.style.color = "var(--success)";
+          chkDates.innerHTML = `<span style="color:var(--success); font-weight:bold;">&check;</span> End date after start date (BR-01)`;
+        } else {
+          sumDuration.textContent = "Invalid dates";
+          chkDates.style.color = "var(--danger)";
+        }
+      }
+    }
+
+    startInp.addEventListener("change", updateDates);
+    endInp.addEventListener("change", updateDates);
+  });
+</script>
+{% endblock %}

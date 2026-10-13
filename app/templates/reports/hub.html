@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Analytical Reports{% endblock %}
+
+{% block content %}
+<div class="reports-hub-page">
+  {{ ui.page_header(
+    title="Analytical Reports",
+    subtitle="Ready-made institutional reports with filters, charts, and CSV export.",
+    breadcrumbs=[{"label": "Dashboard", "url": url_for('dashboard.index')}, {"label": "Reports"}]
+  ) }}
+
+  <div class="reports-grid">
+    {% set icon_map = {
+      'R1': 'bar-chart',
+      'R2': 'wallet',
+      'R3': 'flag',
+      'R4': 'users',
+      'R5': 'pie-chart',
+      'R6': 'book',
+      'R7': 'folder',
+      'R8': 'receipt',
+      'R9': 'award',
+      'R10': 'check'
+    } %}
+
+    {% for rep in reports %}
+    <div class="report-card">
+      <div>
+        <div class="report-card-icon">
+          <svg class="icon" style="width: 22px; height: 22px;">
+            <use href="{{ url_for('static', filename='img/icons.svg') }}#{{ icon_map.get(rep.code, 'bar-chart') }}"/>
+          </svg>
+        </div>
+        <span class="report-card-badge">{{ rep.code }}</span>
+        <h3>{{ rep.title }}</h3>
+        <p>{{ rep.description }}</p>
+      </div>
+
+      <div style="margin-top: var(--s4);">
+        <a href="{{ url_for('reports.show_report', code=rep.code | lower) }}" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center; gap: 6px;">
+          <span>Open Report</span>
+          <svg class="icon" style="width: 14px; height: 14px;"><use href="{{ url_for('static', filename='img/icons.svg') }}#chevron-right"/></svg>
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

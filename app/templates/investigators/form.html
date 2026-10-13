@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}{{ 'Edit Researcher' if researcher else 'New Researcher' }}{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <a href="{{ url_for('investigators.index') }}">Investigators</a>
+  <span class="separator">/</span>
+  <span class="current">{{ 'Edit' if researcher else 'New Researcher' }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="POST" class="warn-unsaved" style="max-width: 600px; margin: 0 auto;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>{{ 'Edit Researcher Profile' if researcher else 'Add Researcher' }}</h1>
+      <p class="text-muted small">Manage faculty member and scholar directory credentials</p>
+    </div>
+    <div class="page-header-actions">
+      <a href="{{ url_for('investigators.index') }}" class="btn btn-secondary btn-sm">Cancel</a>
+      <button type="submit" class="btn btn-primary btn-sm">Save Profile</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4);">
+      <div class="form-group">
+        <label class="form-label" for="first_name">First Name <span class="req">*</span></label>
+        <input type="text" name="first_name" id="first_name" class="input" value="{{ researcher.first_name if researcher else '' }}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="last_name">Last Name <span class="req">*</span></label>
+        <input type="text" name="last_name" id="last_name" class="input" value="{{ researcher.last_name if researcher else '' }}" required>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="email">Email Address <span class="req">*</span></label>
+      <input type="email" name="email" id="email" class="input" value="{{ researcher.email if researcher else '' }}" required placeholder="name@univ.edu">
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4);">
+      <div class="form-group">
+        <label class="form-label" for="phone">Phone Number</label>
+        <input type="text" name="phone" id="phone" class="input" value="{{ researcher.phone if researcher and researcher.phone else '' }}" placeholder="+91 98765 43210">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="orcid">ORCID ID</label>
+        <input type="text" name="orcid" id="orcid" class="input" value="{{ researcher.orcid if researcher and researcher.orcid else '' }}" placeholder="0000-0002-1825-0097">
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4);">
+      <div class="form-group">
+        <label class="form-label" for="designation">Designation <span class="req">*</span></label>
+        <select name="designation" id="designation" class="select" required>
+          <option value="Professor" {% if researcher and researcher.designation == 'Professor' %}selected{% endif %}>Professor</option>
+          <option value="Associate Professor" {% if researcher and researcher.designation == 'Associate Professor' %}selected{% endif %}>Associate Professor</option>
+          <option value="Assistant Professor" {% if researcher and researcher.designation == 'Assistant Professor' %}selected{% endif %}>Assistant Professor</option>
+          <option value="Research Scholar" {% if researcher and researcher.designation == 'Research Scholar' %}selected{% endif %}>Research Scholar</option>
+          <option value="Postdoctoral Fellow" {% if researcher and researcher.designation == 'Postdoctoral Fellow' %}selected{% endif %}>Postdoctoral Fellow</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="dept_id">Department <span class="req">*</span></label>
+        <select name="dept_id" id="dept_id" class="select" required>
+          {% for d in departments %}
+          <option value="{{ d.dept_id }}" {% if researcher and researcher.dept_id == d.dept_id %}selected{% endif %}>{{ d.dept_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top: var(--s2);">
+      <label style="display: flex; align-items: center; gap: var(--s2); font-size: 13.5px; cursor: pointer;">
+        <input type="checkbox" name="is_active" value="1" {% if not researcher or researcher.is_active %}checked{% endif %}>
+        Active Institutional Researcher (Inactive researchers cannot be assigned to projects, BR-12)
+      </label>
+    </div>
+  </div>
+</form>
+{% endblock %}

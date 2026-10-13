@@ -1,0 +1,720 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}{{ data.project.project_code }} — {{ data.project.title }}{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <a href="{{ url_for('projects.index') }}">Projects</a>
+  <span class="separator">/</span>
+  <span class="current">{{ data.project.project_code }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Project Header -->
+<div class="page-header" style="align-items: flex-start;">
+  <div class="page-header-left">
+    <div style="display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s1);">
+      <span style="font-family: var(--font-mono); font-size: 14px; font-weight: 700; background: var(--surface-2); padding: 2px 8px; border-radius: var(--radius-sm);">
+        {{ data.project.project_code }}
+      </span>
+      {{ ui.badge(data.project.status, data.project.status) }}
+    </div>
+    <h1 style="font-size: 22px;">{{ data.project.title }}</h1>
+    <p class="text-muted small" style="margin-top: 4px;">
+      {{ data.project.dept_name }} &middot;
+      PI: <strong>{{ data.pi.name if data.pi else 'Unassigned' }}</strong> &middot;
+      {{ data.project.start_date | date_short }} – {{ data.project.end_date | date_short }}
+    </p>
+  </div>
+
+  <div class="page-header-actions">
+    {% if session.get('role') in ['ADMIN', 'RESEARCH_OFFICER'] %}
+    <button type="button" class="btn btn-secondary btn-sm" data-modal-open="status-modal">
+      Change status
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- KPI Summary Tiles Row -->
+<div class="dashboard-kpis">
+  {{ ui.kpi_card("Total Grant", data.metrics.total_funding, (data.grants | length ~ ' grants sanctioned'), 'wallet', is_money=true) }}
+  <div class="kpi-card">
+    <div class="kpi-header"><span class="kpi-label">Spent</span></div>
+    <div class="kpi-val">{{ data.metrics.total_spent | inr_compact }}</div>
+    <div class="kpi-sub">
+      {{ ui.progress_bar(data.metrics.spent_pct) }}
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-header"><span class="kpi-label">Milestones</span></div>
+    <div class="kpi-val">{{ data.metrics.ms_done }} of {{ data.metrics.ms_total }}</div>
+    <div class="kpi-sub">
+      {% if data.metrics.ms_overdue > 0 %}
+      <span style="color: var(--danger); font-weight: 700;">{{ data.metrics.ms_overdue }} overdue</span>
+      {% else %}
+      <span style="color: var(--success); font-weight: 600;">On schedule</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-header"><span class="kpi-label">Time Elapsed</span></div>
+    <div class="kpi-val">{{ data.metrics.time_pct }}%</div>
+    <div class="kpi-sub">{{ data.metrics.months_left }} months left</div>
+  </div>
+</div>
+
+<!-- Tabs Navigation -->
+<div class="tabs" role="tablist">
+  <a href="{{ url_for('projects.detail', id=data.project.project_id, tab='overview') }}" class="tab-link {% if active_tab == 'overview' %}active{% endif %}">
+    Overview
+  </a>
+  <a href="{{ url_for('projects.detail', id=data.project.project_id, tab='team') }}" class="tab-link {% if active_tab == 'team' %}active{% endif %}">
+    Team <span class="tab-badge">{{ data.team | length }}</span>
+  </a>
+  <a href="{{ url_for('projects.detail', id=data.project.project_id, tab='grants') }}" class="tab-link {% if active_tab == 'grants' %}active{% endif %}">
+    Grants <span class="tab-badge">{{ data.grants | length }}</span>
+  </a>
+  <a href="{{ url_for('projects.detail', id=data.project.project_id, tab='milestones') }}" class="tab-link {% if active_tab == 'milestones' %}active{% endif %}">
+    Milestones <span class="tab-badge">{{ data.milestones | length }}</span>
+  </a>
+  <a href="{{ url_for('projects.detail', id=data.project.project_id, tab='expenditure') }}" class="tab-link {% if active_tab == 'expenditure' %}active{% endif %}">
+    Expenditure <span class="tab-badge">{{ data.expenditures | length }}</span>
+  </a>
+  <a href="{{ url_for('projects.detail', id=data.project.project_id, tab='publications') }}" class="tab-link {% if active_tab == 'publications' %}active{% endif %}">
+    Publications <span class="tab-badge">{{ data.publications | length }}</span>
+  </a>
+  <a href="{{ url_for('projects.detail', id=data.project.project_id, tab='patents') }}" class="tab-link {% if active_tab == 'patents' %}active{% endif %}">
+    Patents <span class="tab-badge">{{ data.patents | length }}</span>
+  </a>
+  <a href="{{ url_for('projects.detail', id=data.project.project_id, tab='reports') }}" class="tab-link {% if active_tab == 'reports' %}active{% endif %}">
+    Reports <span class="tab-badge">{{ data.reports | length }}</span>
+  </a>
+</div>
+
+<!-- TAB CONTENTS -->
+
+<!-- 1. OVERVIEW TAB -->
+{% if active_tab == 'overview' %}
+<div style="display: grid; grid-template-columns: 7fr 5fr; gap: var(--s5);">
+  <div class="card">
+    <div class="card-header"><h2 class="card-title">Project Overview</h2></div>
+    <div style="font-size: 13.5px; line-height: 1.6; margin-bottom: var(--s5);">
+      {{ data.project.abstract or 'No abstract provided for this project.' }}
+    </div>
+
+    <h3 style="margin-bottom: var(--s3); font-size: 14px;">Key Schedule Dates</h3>
+    <div style="display: flex; flex-direction: column; gap: var(--s3); font-size: 13px;">
+      <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 6px;">
+        <span class="text-muted">Start Date:</span>
+        <span class="font-bold">{{ data.project.start_date | date_short }}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 6px;">
+        <span class="text-muted">End Date:</span>
+        <span class="font-bold">{{ data.project.end_date | date_short }}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span class="text-muted">Next Due Milestone:</span>
+        {% if data.metrics.next_due_milestone %}
+        <span class="font-bold" style="color: var(--primary);">{{ data.metrics.next_due_milestone.title }} ({{ data.metrics.next_due_milestone.due_date | date_short }})</span>
+        {% else %}
+        <span class="text-muted">None pending</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Project Health</h2>
+      {{ ui.badge(data.metrics.rag ~ ' Health', data.metrics.rag) }}
+    </div>
+    <div style="display: flex; flex-direction: column; gap: var(--s3); font-size: 13.5px; line-height: 1.6;">
+      {% for note in data.metrics.health_notes %}
+      <div style="display: flex; align-items: flex-start; gap: var(--s2);">
+        <span style="color: var(--primary); font-weight: bold;">&bull;</span>
+        <span>{{ note }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- 2. TEAM TAB -->
+{% if active_tab == 'team' %}
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Research Team</h2>
+    {% if session.get('role') in ['ADMIN', 'RESEARCH_OFFICER'] %}
+    <div style="display: flex; gap: var(--s2);">
+      <button type="button" class="btn btn-secondary btn-sm" data-modal-open="change-pi-modal">Change PI</button>
+      <button type="button" class="btn btn-primary btn-sm" data-modal-open="assign-modal">+ Assign investigator</button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="table-container" style="border: none; box-shadow: none;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Researcher</th>
+          <th>Role</th>
+          <th>Designation</th>
+          <th>Department</th>
+          <th class="text-right">Effort (%)</th>
+          <th>Assigned Since</th>
+          {% if session.get('role') in ['ADMIN', 'RESEARCH_OFFICER'] %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in data.team %}
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: var(--s2);">
+              {{ ui.avatar(m.name, 28) }}
+              <div>
+                <div style="font-weight: 600;">{{ m.name }}</div>
+                <div class="small text-muted">{{ m.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ ui.badge(m.role, 'primary' if m.role == 'PI' else 'neutral') }}</td>
+          <td>{{ m.designation }}</td>
+          <td>{{ m.dept_name }}</td>
+          <td class="text-right font-bold tabular-nums">{{ m.effort_percent }}%</td>
+          <td>{{ m.assigned_date | date_short }}</td>
+          {% if session.get('role') in ['ADMIN', 'RESEARCH_OFFICER'] %}
+          <td>
+            {% if m.role != 'PI' %}
+            <form action="{{ url_for('projects.remove_member', id=data.project.project_id, rid=m.researcher_id) }}" method="POST" onsubmit="return confirm('Remove {{ m.name }} from this project?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--danger-ink);" title="Remove member">
+                <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#trash"/></svg>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- 3. GRANTS TAB -->
+{% if active_tab == 'grants' %}
+<div style="display: flex; flex-direction: column; gap: var(--s5);">
+  {% if session.get('role') in ['ADMIN', 'RESEARCH_OFFICER'] %}
+  <div style="display: flex; justify-content: flex-end;">
+    <a href="{{ url_for('grants.new_grant', project_id=data.project.project_id) }}" class="btn btn-primary btn-sm">+ Add grant</a>
+  </div>
+  {% endif %}
+
+  {% for g in data.grants %}
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title" style="margin-bottom: 2px;">
+          <a href="{{ url_for('grants.detail', id=g.grant_id) }}"><code>{{ g.grant_number }}</code></a>
+          &middot; {{ g.agency_name }}
+        </h2>
+        <span class="small text-muted">{{ g.grant_start | date_short }} – {{ g.grant_end | date_short }}</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: var(--s3);">
+        {{ ui.badge(g.status, g.status) }}
+        <span style="font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums;">{{ g.amount | inr }}</span>
+      </div>
+    </div>
+
+    <!-- Allocations Breakdown -->
+    <h3 style="font-size: 13px; margin-bottom: var(--s3);">Budget Allocations & Spending</h3>
+    <div class="table-container" style="border: none; box-shadow: none;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Budget Head</th>
+            <th class="text-right">Allocated</th>
+            <th class="text-right">Spent</th>
+            <th class="text-right">Remaining</th>
+            <th style="min-width: 140px;">Utilization</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in g.allocations %}
+          <tr>
+            <td class="font-bold">{{ a.head_name }}</td>
+            <td class="text-right tabular-nums">{{ a.allocated | inr }}</td>
+            <td class="text-right tabular-nums">{{ a.spent | inr }}</td>
+            <td class="text-right tabular-nums font-bold" style="color: {{ 'var(--danger)' if a.remaining <= 0 else 'var(--text)' }};">
+              {{ a.remaining | inr }}
+            </td>
+            <td>{{ ui.progress_bar(a.spent_pct) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+    {{ ui.empty_state("No grants sanctioned yet", "Add a funding award and budget allocation to this project.", "wallet", url_for('grants.new_grant', project_id=data.project.project_id) if session.get('role') in ['ADMIN', 'RESEARCH_OFFICER'] else '', "Add grant") }}
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- 4. MILESTONES TAB -->
+{% if active_tab == 'milestones' %}
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Milestones Timeline</h2>
+    <button type="button" class="btn btn-primary btn-sm" data-modal-open="milestone-modal">+ Add milestone</button>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: var(--s4); padding: var(--s3) 0;">
+    {% for m in data.milestones %}
+    <div style="display: flex; align-items: flex-start; gap: var(--s4); padding-bottom: var(--s3); border-bottom: 1px solid var(--border);">
+      <div style="width: 12px; height: 12px; border-radius: 50%; background: {{ 'var(--success)' if m.status == 'Completed' else ('var(--danger)' if m.is_overdue else 'var(--primary)') }}; margin-top: 6px;"></div>
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <span style="font-weight: 600; font-size: 14px;">{{ m.title }}</span>
+          <div style="display: flex; align-items: center; gap: var(--s3);">
+            {{ ui.badge(m.status, m.status) }}
+            {% if m.status != 'Completed' %}
+            <form action="{{ url_for('milestones.complete', id=m.milestone_id) }}" method="POST" style="display: inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="completed_date" value="{{ None | date_short }}">
+              <input type="hidden" name="return_url" value="{{ url_for('projects.detail', id=data.project.project_id, tab='milestones') }}">
+              <button type="submit" class="btn btn-secondary btn-sm">Mark done</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+        <p class="small text-muted" style="margin-bottom: 6px;">{{ m.description or 'No description provided.' }}</p>
+        <div style="font-size: 12px; font-weight: 600; color: {{ 'var(--danger)' if m.is_overdue else 'var(--text-muted)' }};">
+          Due: {{ m.due_date | date_short }}
+          {% if m.is_overdue %}&middot; {{ m.days_late }} days overdue{% endif %}
+          {% if m.completed_date %}&middot; Completed on {{ m.completed_date | date_short }}{% endif %}
+        </div>
+      </div>
+    </div>
+    {% else %}
+      {{ ui.empty_state("No milestones scheduled", "Set project targets and deliverables with deadlines.", "flag") }}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- 5. EXPENDITURE TAB -->
+{% if active_tab == 'expenditure' %}
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Recent Expenditures</h2>
+    {% if session.get('role') in ['ADMIN', 'RESEARCH_OFFICER'] and data.grants %}
+    <a href="{{ url_for('expenditure.new_expense', grant_id=data.grants[0].grant_id) }}" class="btn btn-primary btn-sm">+ Record expense</a>
+    {% endif %}
+  </div>
+
+  {% if data.expenditures %}
+  <div class="table-container" style="border: none; box-shadow: none;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Voucher</th>
+          <th>Grant</th>
+          <th>Budget Head</th>
+          <th>Description</th>
+          <th class="text-right">Amount</th>
+          <th>Recorded By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for exp in data.expenditures %}
+        <tr>
+          <td>{{ exp.expense_date | date_short }}</td>
+          <td><code>{{ exp.voucher_no }}</code></td>
+          <td><code>{{ exp.grant_number }}</code></td>
+          <td class="font-bold">{{ exp.head_name }}</td>
+          <td>{{ exp.description }}</td>
+          <td class="text-right tabular-nums font-bold">{{ exp.amount | inr }}</td>
+          <td class="small text-muted">{{ exp.recorded_by }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ ui.empty_state("No expenditures recorded yet", "Track equipment, travel and consumables vouchers.", "receipt") }}
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- 6. PUBLICATIONS TAB -->
+{% if active_tab == 'publications' %}
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Research Publications</h2>
+    <div style="display: flex; gap: var(--s2);">
+      <button type="button" class="btn btn-secondary btn-sm" data-modal-open="link-pub-modal">Link existing</button>
+      {% if session.get('role') in ['ADMIN', 'RESEARCH_OFFICER'] %}
+      <a href="{{ url_for('publications.new_publication', project_id=data.project.project_id) }}" class="btn btn-primary btn-sm">+ Add new</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: var(--s4); padding: var(--s3) 0;">
+    {% for pub in data.publications %}
+    <div style="padding-bottom: var(--s3); border-bottom: 1px solid var(--border);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+        <a href="{{ url_for('publications.detail', id=pub.publication_id) }}" style="font-weight: 600; font-size: 14px;">{{ pub.title }}</a>
+        {{ ui.badge(pub.indexing, 'info') }}
+      </div>
+      <div class="small text-muted" style="margin-bottom: 6px;">
+        {{ pub.venue }} &middot; {{ pub.publication_date | date_short }}
+        {% if pub.doi %}&middot; DOI: <code>{{ pub.doi }}</code>{% endif %}
+      </div>
+      <div class="avatar-stack">
+        {% for a in pub.authors %}
+          {{ ui.avatar(a.name, 24) }}
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+      {{ ui.empty_state("No publications linked yet", "Link publications produced under this project.", "book") }}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- 7. PATENTS TAB -->
+{% if active_tab == 'patents' %}
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Project Patents</h2>
+    <div style="display: flex; gap: var(--s2);">
+      <button type="button" class="btn btn-secondary btn-sm" data-modal-open="link-pat-modal">Link existing</button>
+      {% if session.get('role') in ['ADMIN', 'RESEARCH_OFFICER'] %}
+      <a href="{{ url_for('patents.new_patent') }}" class="btn btn-primary btn-sm">+ Add new</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: var(--s4); padding: var(--s3) 0;">
+    {% for pat in data.patents %}
+    <div style="padding-bottom: var(--s3); border-bottom: 1px solid var(--border);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+        <a href="{{ url_for('patents.detail', id=pat.patent_id) }}" style="font-weight: 600; font-size: 14px;">{{ pat.title }}</a>
+        {{ ui.badge(pat.status, pat.status) }}
+      </div>
+      <div class="small text-muted">
+        App #: <code>{{ pat.application_number }}</code>
+        {% if pat.patent_number %}&middot; Patent #: <code>{{ pat.patent_number }}</code>{% endif %}
+        &middot; Filed: {{ pat.filing_date | date_short }}
+      </div>
+    </div>
+    {% else %}
+      {{ ui.empty_state("No patents linked yet", "Record intellectual property and patents resulting from this research.", "award") }}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- 8. REPORTS TAB -->
+{% if active_tab == 'reports' %}
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Project Status Reports</h2>
+    <a href="{{ url_for('projects.new_report', id=data.project.project_id) }}" class="btn btn-primary btn-sm">+ New report</a>
+  </div>
+
+  {% if data.reports %}
+  <div class="table-container" style="border: none; box-shadow: none;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Period</th>
+          <th>Submitted On</th>
+          <th>Submitted By</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rep in data.reports %}
+        <tr>
+          <td class="font-bold">{{ rep.report_type }}</td>
+          <td>{{ rep.period_start | date_short }} – {{ rep.period_end | date_short }}</td>
+          <td>{{ rep.submitted_on | date_short if rep.submitted_on else '—' }}</td>
+          <td>{{ rep.submitted_by_name or '—' }}</td>
+          <td>{{ ui.badge(rep.status, rep.status) }}</td>
+          <td>
+            <div style="display: flex; gap: var(--s2);">
+              {% if rep.status in ['Draft', 'Returned'] %}
+              <a href="{{ url_for('projects.edit_report', id=data.project.project_id, report_id=rep.report_id) }}" class="btn btn-secondary btn-sm">Edit</a>
+              {% endif %}
+              {% if session.get('role') in ['ADMIN', 'RESEARCH_OFFICER'] and rep.status == 'Submitted' %}
+              <form action="{{ url_for('projects.review_report', id=data.project.project_id, report_id=rep.report_id) }}" method="POST" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="status" value="Accepted">
+                <button type="submit" class="btn btn-primary btn-sm">Accept</button>
+              </form>
+              <form action="{{ url_for('projects.review_report', id=data.project.project_id, report_id=rep.report_id) }}" method="POST" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="status" value="Returned">
+                <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--warning-ink);">Return</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ ui.empty_state("No status reports filed yet", "Submit progress reports, financial utilization certificates, or final project closures.", "bar-chart") }}
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- MODALS -->
+
+<!-- Status Change Modal -->
+<div class="modal-backdrop" id="status-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title">Change Project Status</h3>
+      <button type="button" class="btn-icon" data-modal-close aria-label="Close modal"><svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#x"/></svg></button>
+    </div>
+    <form action="{{ url_for('projects.change_status', id=data.project.project_id) }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="new_status">Select Status</label>
+          <select name="status" id="new_status" class="select" required>
+            <option value="Active" {% if data.project.status == 'Active' %}selected{% endif %}>Active</option>
+            <option value="Proposed" {% if data.project.status == 'Proposed' %}selected{% endif %}>Proposed</option>
+            <option value="On Hold" {% if data.project.status == 'On Hold' %}selected{% endif %}>On Hold</option>
+            <option value="Completed" {% if data.project.status == 'Completed' %}selected{% endif %}>Completed (sp_close_project)</option>
+            <option value="Cancelled" {% if data.project.status == 'Cancelled' %}selected{% endif %}>Cancelled (sp_close_project)</option>
+          </select>
+          <span class="field-help">Closing as Completed requires all milestones to be finished. Closed projects become read-only (BR-17).</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Update Status</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Assign Investigator Modal -->
+<div class="modal-backdrop" id="assign-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title">Assign Investigator</h3>
+      <button type="button" class="btn-icon" data-modal-close aria-label="Close modal"><svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#x"/></svg></button>
+    </div>
+    <form action="{{ url_for('projects.assign_member', id=data.project.project_id) }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Researcher</label>
+          <input type="text" class="input" id="assign-res-typeahead" placeholder="Type researcher name..." required>
+          <input type="hidden" name="researcher_id" id="assign-res-id">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select name="role" class="select" required>
+            <option value="Co-PI">Co-PI</option>
+            <option value="Researcher">Researcher</option>
+            <option value="Research Scholar">Research Scholar</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Effort Percentage (%)</label>
+          <input type="number" name="effort_percent" id="assign-effort-input" class="input" min="1" max="100" value="20" required>
+        </div>
+        <div id="assign-workload-preview" style="font-size: 13px; font-weight: 600; color: var(--primary);"></div>
+        <div id="assign-workload-warning" class="field-error" style="display: none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm" id="assign-submit-btn">Assign</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Change PI Modal -->
+<div class="modal-backdrop" id="change-pi-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title">Transfer Principal Investigator</h3>
+      <button type="button" class="btn-icon" data-modal-close aria-label="Close modal"><svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#x"/></svg></button>
+    </div>
+    <form action="{{ url_for('projects.transfer_pi', id=data.project.project_id) }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-body">
+        <p class="small text-muted" style="margin-bottom: var(--s4);">
+          Current PI: <strong>{{ data.pi.name if data.pi else 'None' }}</strong>. This action atomically transfers responsibility to the new researcher under deadlock-free ordering.
+        </p>
+        <div class="form-group">
+          <label class="form-label">New PI Researcher</label>
+          <input type="text" class="input" id="change-pi-typeahead" placeholder="Type researcher name..." required>
+          <input type="hidden" name="new_res_id" id="change-pi-id">
+        </div>
+        <div class="form-group">
+          <label class="form-label">New PI Effort (%)</label>
+          <input type="number" name="new_effort" class="input" min="1" max="100" value="25" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Confirm Transfer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Milestone Form Modal -->
+<div class="modal-backdrop" id="milestone-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title">New Milestone</h3>
+      <button type="button" class="btn-icon" data-modal-close aria-label="Close modal"><svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#x"/></svg></button>
+    </div>
+    <form action="{{ url_for('milestones.new_milestone') }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="project_id" value="{{ data.project.project_id }}">
+      <input type="hidden" name="return_url" value="{{ url_for('projects.detail', id=data.project.project_id, tab='milestones') }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Title <span class="req">*</span></label>
+          <input type="text" name="title" class="input" required placeholder="Milestone description">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Due Date <span class="req">*</span></label>
+          <input type="date" name="due_date" class="input" min="{{ data.project.start_date }}" max="{{ data.project.end_date }}" required>
+          <span class="field-help">Must fall between {{ data.project.start_date | date_short }} and {{ data.project.end_date | date_short }} (BR-04)</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select name="status" class="select">
+            <option value="Pending">Pending</option>
+            <option value="In Progress">In Progress</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="textarea" placeholder="Deliverables and criteria..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Save Milestone</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Link Publication Modal -->
+<div class="modal-backdrop" id="link-pub-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title">Link Publication</h3>
+      <button type="button" class="btn-icon" data-modal-close aria-label="Close modal"><svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#x"/></svg></button>
+    </div>
+    <form action="{{ url_for('projects.link_pub', id=data.project.project_id) }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Search Publication</label>
+          <input type="text" class="input" id="link-pub-typeahead" placeholder="Search by title or DOI..." required>
+          <input type="hidden" name="publication_id" id="link-pub-id">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Link Publication</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Link Patent Modal -->
+<div class="modal-backdrop" id="link-pat-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title">Link Patent</h3>
+      <button type="button" class="btn-icon" data-modal-close aria-label="Close modal"><svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#x"/></svg></button>
+    </div>
+    <form action="{{ url_for('projects.link_pat', id=data.project.project_id) }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Search Patent</label>
+          <input type="text" class="input" id="link-pat-typeahead" placeholder="Search by title or application number..." required>
+          <input type="hidden" name="patent_id" id="link-pat-id">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Link Patent</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // Typeahead for Assign Modal
+    const assignTypeahead = document.getElementById("assign-res-typeahead");
+    const assignId = document.getElementById("assign-res-id");
+    if (assignTypeahead && assignId) {
+      new Typeahead(assignTypeahead, {
+        endpoint: (q) => `/api/researchers/search?q=${encodeURIComponent(q)}&active=1`,
+        targetIdInput: assignId
+      });
+    }
+
+    // Typeahead for Change PI Modal
+    const changePiTypeahead = document.getElementById("change-pi-typeahead");
+    const changePiId = document.getElementById("change-pi-id");
+    if (changePiTypeahead && changePiId) {
+      new Typeahead(changePiTypeahead, {
+        endpoint: (q) => `/api/researchers/search?q=${encodeURIComponent(q)}&active=1`,
+        targetIdInput: changePiId
+      });
+    }
+
+    // Typeahead for Link Publication
+    const linkPubTypeahead = document.getElementById("link-pub-typeahead");
+    const linkPubId = document.getElementById("link-pub-id");
+    if (linkPubTypeahead && linkPubId) {
+      new Typeahead(linkPubTypeahead, {
+        endpoint: (q) => `/api/publications/search?project_id={{ data.project.project_id }}&q=${encodeURIComponent(q)}`,
+        targetIdInput: linkPubId
+      });
+    }
+
+    // Typeahead for Link Patent
+    const linkPatTypeahead = document.getElementById("link-pat-typeahead");
+    const linkPatId = document.getElementById("link-pat-id");
+    if (linkPatTypeahead && linkPatId) {
+      new Typeahead(linkPatTypeahead, {
+        endpoint: (q) => `/api/patents/search?project_id={{ data.project.project_id }}&q=${encodeURIComponent(q)}`,
+        targetIdInput: linkPatId
+      });
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Expenditure{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <span class="current">Expenditure</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Expenditure</h1>
+    <p class="text-muted small">Disbursements, vouchers and budget utilization entries across grants</p>
+  </div>
+  {% if role in ['ADMIN', 'RESEARCH_OFFICER'] %}
+  <div class="page-header-actions">
+    <a href="{{ url_for('expenditure.new_expense') }}" class="btn btn-primary btn-sm">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#plus"/></svg>
+      Record expense
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" action="{{ url_for('expenditure.index') }}" class="filter-bar">
+  <div style="flex: 1; min-width: 200px; position: relative;">
+    <svg class="icon" style="position: absolute; left: 10px; top: 10px; color: var(--text-muted);"><use href="{{ url_for('static', filename='img/icons.svg') }}#search"/></svg>
+    <input type="text" name="q" value="{{ filters.q }}" class="input" style="padding-left: 36px; width: 100%;" placeholder="Search voucher or description...">
+  </div>
+
+  <select name="head_id" class="select" onchange="this.form.submit()">
+    <option value="">All Budget Heads</option>
+    {% for bh in budget_heads %}
+    <option value="{{ bh.head_id }}" {% if filters.head_id == bh.head_id|string %}selected{% endif %}>{{ bh.head_name }}</option>
+    {% endfor %}
+  </select>
+
+  <div style="display: flex; align-items: center; gap: var(--s2);">
+    <input type="date" name="from_date" value="{{ filters.from_date }}" class="input" style="max-width: 140px;" onchange="this.form.submit()" title="From Date">
+    <span class="small text-muted">&ndash;</span>
+    <input type="date" name="to_date" value="{{ filters.to_date }}" class="input" style="max-width: 140px;" onchange="this.form.submit()" title="To Date">
+  </div>
+
+  <a href="{{ url_for('expenditure.index') }}" class="btn btn-ghost btn-sm">Clear filters</a>
+</form>
+
+<!-- Expenditures Table -->
+{% if expenditures %}
+<div class="table-container">
+  <table class="table">
+    <thead>
+      <tr>
+        <th><a href="{{ url_for('expenditure.index', sort='date', dir='desc' if sort_key == 'date' and sort_dir == 'asc' else 'asc', **filters) }}">Date</a></th>
+        <th><a href="{{ url_for('expenditure.index', sort='voucher', dir='desc' if sort_key == 'voucher' and sort_dir == 'asc' else 'asc', **filters) }}">Voucher No</a></th>
+        <th><a href="{{ url_for('expenditure.index', sort='project', dir='desc' if sort_key == 'project' and sort_dir == 'asc' else 'asc', **filters) }}">Project</a></th>
+        <th><a href="{{ url_for('expenditure.index', sort='grant', dir='desc' if sort_key == 'grant' and sort_dir == 'asc' else 'asc', **filters) }}">Grant</a></th>
+        <th><a href="{{ url_for('expenditure.index', sort='head', dir='desc' if sort_key == 'head' and sort_dir == 'asc' else 'asc', **filters) }}">Budget Head</a></th>
+        <th>Description</th>
+        <th class="text-right"><a href="{{ url_for('expenditure.index', sort='amount', dir='desc' if sort_key == 'amount' and sort_dir == 'asc' else 'asc', **filters) }}">Amount</a></th>
+        <th>Recorded By</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for exp in expenditures %}
+      <tr>
+        <td>{{ exp.expense_date | date_short }}</td>
+        <td><code>{{ exp.voucher_no }}</code></td>
+        <td><a href="{{ url_for('projects.detail', id=exp.project_id) }}"><code>{{ exp.project_code }}</code></a></td>
+        <td><a href="{{ url_for('grants.detail', id=exp.grant_id) }}"><code>{{ exp.grant_number }}</code></a></td>
+        <td class="font-bold">{{ exp.head_name }}</td>
+        <td>{{ exp.description }}</td>
+        <td class="text-right tabular-nums font-bold">{{ exp.amount | inr }}</td>
+        <td class="small text-muted">{{ exp.recorded_by }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{{ ui.pagination(page, total_pages, total, page_size, url_for('expenditure.index', sort=sort_key, dir=sort_dir, **filters) ~ '&') }}
+
+{% else %}
+  {{ ui.empty_state("No expenses found", "No expenditures recorded matching these filters.", "receipt", url_for('expenditure.index'), "Clear filters") }}
+{% endif %}
+{% endblock %}

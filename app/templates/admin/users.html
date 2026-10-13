@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="admin-users-page">
+  <div class="page-header">
+    <div class="page-header-left">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+        <span class="separator">/</span>
+        <span class="current" aria-current="page">Admin Administration</span>
+      </nav>
+      <h1>Users &amp; Audit Log</h1>
+      <p class="text-muted small">Manage system user credentials, researcher role bindings, and inspect transactional audit history.</p>
+    </div>
+    <div class="page-header-actions">
+      <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('newUserModal').showModal()">
+        <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#plus"/></svg>
+        <span>New User</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Admin Navigation Tabs -->
+  <div class="tabs" style="margin-bottom: var(--s5);">
+    <a href="{{ url_for('admin.users') }}" class="tab-item active">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#users"/></svg>
+      <span>User Accounts</span>
+    </a>
+    <a href="{{ url_for('admin.audit') }}" class="tab-item">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#shield"/></svg>
+      <span>Audit Log</span>
+    </a>
+  </div>
+
+  <!-- Users Table Card -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Registered Accounts</h2>
+      <span class="badge badge-neutral">{{ users | length }} user(s)</span>
+    </div>
+
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Linked Researcher</th>
+            <th>Department</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: var(--s2);">
+                {{ ui.avatar(u.username, 28) }}
+                <strong>{{ u.username }}</strong>
+              </div>
+            </td>
+            <td>
+              {% if u.role == 'ADMIN' %}
+                <span class="badge badge-primary"><span class="badge-dot-indicator"></span>ADMIN</span>
+              {% elif u.role == 'RESEARCH_OFFICER' %}
+                <span class="badge badge-info"><span class="badge-dot-indicator"></span>OFFICER</span>
+              {% elif u.role == 'PI' %}
+                <span class="badge badge-success"><span class="badge-dot-indicator"></span>PI</span>
+              {% else %}
+                <span class="badge badge-neutral"><span class="badge-dot-indicator"></span>VIEWER</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.researcher_name %}
+                {{ u.researcher_name }}
+              {% else %}
+                <span class="text-muted">&mdash;</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.dept_code %}
+                <code>{{ u.dept_code }}</code> &middot; {{ u.dept_name }}
+              {% else %}
+                <span class="text-muted">&mdash;</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.is_active %}
+                <span class="badge badge-success"><span class="badge-dot-indicator"></span>Active</span>
+              {% else %}
+                <span class="badge badge-danger"><span class="badge-dot-indicator"></span>Disabled</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">
+              {{ u.created_at | string | truncate(16, true, '') }}
+            </td>
+            <td class="text-right">
+              <div style="display: flex; gap: var(--s2); justify-content: flex-end;">
+                <!-- Edit Role Button -->
+                <button type="button" class="btn btn-secondary btn-sm" onclick="openEditRoleModal('{{ u.user_id }}', '{{ u.username }}', '{{ u.role }}', '{{ u.researcher_id or '' }}')">
+                  <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#edit"/></svg>
+                  <span>Edit Role</span>
+                </button>
+
+                <!-- Disable Account Form -->
+                {% if u.is_active %}
+                <form method="POST" action="{{ url_for('admin.disable', id=u.user_id) }}" onsubmit="return confirm('Are you sure you want to deactivate user {{ u.username }}?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-danger btn-sm" title="Disable user account">
+                    <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#trash"/></svg>
+                    <span>Disable</span>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 1: New User Provisioning -->
+<dialog id="newUserModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 class="modal-title">Provision New User Account</h3>
+      <button type="button" class="btn-icon" onclick="document.getElementById('newUserModal').close()" aria-label="Close">
+        <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#x"/></svg>
+      </button>
+    </div>
+    <form method="POST" action="{{ url_for('admin.users') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="new-username" class="form-label required">Username</label>
+          <input type="text" id="new-username" name="username" class="form-control" required placeholder="e.g. jdoe" pattern="[a-zA-Z0-9_-]{3,50}">
+          <span class="form-hint">Unique alphanumeric username (3-50 chars).</span>
+        </div>
+
+        <div class="form-group">
+          <label for="new-password" class="form-label required">Temporary Password</label>
+          <input type="password" id="new-password" name="password" class="form-control" required placeholder="Minimum 8 characters">
+          <span class="form-hint">Shown only now; hashed using bcrypt upon saving.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="new-role" class="form-label required">System Role</label>
+          <select id="new-role" name="role" class="form-control" required onchange="toggleResearcherRequired('new')">
+            <option value="VIEWER">VIEWER &mdash; Read-only aggregate metrics &amp; redacted reports</option>
+            <option value="PI">PI &mdash; Principal Investigator (Scoped to own projects)</option>
+            <option value="RESEARCH_OFFICER">RESEARCH_OFFICER &mdash; Operational Grant &amp; Project Management</option>
+            <option value="ADMIN">ADMIN &mdash; Full administrative &amp; user control</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="new-researcher-group">
+          <label for="new-researcher" class="form-label" id="new-researcher-label">Linked Researcher</label>
+          <select id="new-researcher" name="researcher_id" class="form-control">
+            <option value="">&mdash; None (Administrative / Viewer Account) &mdash;</option>
+            {% for r in researchers %}
+            <option value="{{ r.researcher_id }}">{{ r.name }} ({{ r.dept_name }})</option>
+            {% endfor %}
+          </select>
+          <span class="form-hint" id="new-researcher-hint">Required when role is PI (enforced by database constraint).</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('newUserModal').close()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create User Account</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<!-- Modal 2: Edit User Role & Researcher -->
+<dialog id="editRoleModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 class="modal-title">Update User Role</h3>
+      <button type="button" class="btn-icon" onclick="document.getElementById('editRoleModal').close()" aria-label="Close">
+        <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#x"/></svg>
+      </button>
+    </div>
+    <form method="POST" id="editRoleForm" action="">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-body">
+        <p style="margin-bottom: var(--s4); font-size: 14px;">Updating authorization credentials for <strong id="edit-modal-username"></strong>.</p>
+
+        <div class="form-group">
+          <label for="edit-role" class="form-label required">Assign Role</label>
+          <select id="edit-role" name="role" class="form-control" required onchange="toggleResearcherRequired('edit')">
+            <option value="VIEWER">VIEWER &mdash; Read-only aggregates</option>
+            <option value="PI">PI &mdash; Principal Investigator</option>
+            <option value="RESEARCH_OFFICER">RESEARCH_OFFICER &mdash; Full operations</option>
+            <option value="ADMIN">ADMIN &mdash; Full administrator</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="edit-researcher-group">
+          <label for="edit-researcher" class="form-label" id="edit-researcher-label">Linked Researcher</label>
+          <select id="edit-researcher" name="researcher_id" class="form-control">
+            <option value="">&mdash; None (Administrative / Viewer Account) &mdash;</option>
+            {% for r in researchers %}
+            <option value="{{ r.researcher_id }}">{{ r.name }} ({{ r.dept_name }})</option>
+            {% endfor %}
+          </select>
+          <span class="form-hint">Mandatory for PI role to scope project permissions.</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('editRoleModal').close()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Role Changes</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<script>
+  function toggleResearcherRequired(prefix) {
+    const roleSelect = document.getElementById(prefix + '-role');
+    const researcherSelect = document.getElementById(prefix + '-researcher');
+    const label = document.getElementById(prefix + '-researcher-label');
+    if (!roleSelect || !researcherSelect) return;
+
+    if (roleSelect.value === 'PI') {
+      researcherSelect.required = true;
+      if (label) label.classList.add('required');
+    } else {
+      researcherSelect.required = false;
+      if (label) label.classList.remove('required');
+    }
+  }
+
+  function openEditRoleModal(userId, username, role, researcherId) {
+    const form = document.getElementById('editRoleForm');
+    form.action = '/admin/users/' + userId + '/role';
+    document.getElementById('edit-modal-username').textContent = username;
+    document.getElementById('edit-role').value = role;
+    document.getElementById('edit-researcher').value = researcherId || '';
+    toggleResearcherRequired('edit');
+    document.getElementById('editRoleModal').showModal();
+  }
+</script>
+{% endblock %}

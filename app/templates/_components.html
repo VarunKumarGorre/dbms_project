@@ -1,0 +1,164 @@
+{# ==========================================================================
+   RPGMS Reusable UI Component Macros
+   File: app/templates/_components.html
+   Author: Antigravity AI
+   ========================================================================== #}
+
+{# 1. Page Header Macro #}
+{% macro page_header(title, subtitle='', breadcrumbs=[], actions=[]) %}
+<div class="page-header">
+  <div class="page-header-left">
+    {% if breadcrumbs %}
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      {% for crumb in breadcrumbs %}
+        {% if loop.last %}
+          <span class="current" aria-current="page">{{ crumb.label }}</span>
+        {% else %}
+          <a href="{{ crumb.url }}">{{ crumb.label }}</a>
+          <span class="separator">/</span>
+        {% endif %}
+      {% endfor %}
+    </nav>
+    {% endif %}
+    <h1>{{ title }}</h1>
+    {% if subtitle %}
+    <p class="text-muted small">{{ subtitle }}</p>
+    {% endif %}
+  </div>
+  {% if actions %}
+  <div class="page-header-actions">
+    {% for act in actions %}
+      {{ act | safe }}
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# 2. KPI Card Macro #}
+{% macro kpi_card(label, value, subline='', icon_name='', is_money=false, delta='') %}
+<div class="kpi-card">
+  <div class="kpi-header">
+    <span class="kpi-label">{{ label }}</span>
+    {% if icon_name %}
+    <div class="kpi-icon-chip">
+      <svg class="icon"><use href="/static/img/icons.svg#{{ icon_name }}"/></svg>
+    </div>
+    {% endif %}
+  </div>
+  <div class="kpi-val">
+    {% if is_money %}
+      {{ value | inr_compact }}
+    {% else %}
+      {{ value }}
+    {% endif %}
+  </div>
+  {% if subline or delta %}
+  <div class="kpi-sub">
+    {% if delta %}<span>{{ delta }}</span>{% endif %}
+    <span>{{ subline }}</span>
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# 3. Status Badge Macro #}
+{% macro badge(text, variant='neutral') %}
+{% set v = variant | lower %}
+{% if v in ['active', 'granted', 'completed', 'green', 'on track'] %}
+  {% set cls = 'badge-success' %}
+{% elif v in ['delayed', 'near limit', 'amber', 'returned'] %}
+  {% set cls = 'badge-warning' %}
+{% elif v in ['danger', 'cancelled', 'terminated', 'exhausted', 'red', 'rejected'] %}
+  {% set cls = 'badge-danger' %}
+{% elif v in ['info', 'sanctioned', 'in progress', 'under 50%', 'submitted', 'filed', 'published', 'research_officer'] %}
+  {% set cls = 'badge-info' %}
+{% elif v in ['primary', 'admin'] %}
+  {% set cls = 'badge-primary' %}
+{% else %}
+  {% set cls = 'badge-neutral' %}
+{% endif %}
+<span class="badge {{ cls }}">
+  <span class="badge-dot-indicator"></span>
+  {{ text }}
+</span>
+{% endmacro %}
+
+{# 4. Progress Bar Macro #}
+{% macro progress_bar(percent, health='', show_label=true) %}
+{% set p = percent | float %}
+{% if health %}
+  {% set h_cls = health | lower | replace(' ', '-') %}
+{% else %}
+  {% if p >= 100 %}{% set h_cls = 'exhausted' %}
+  {% elif p >= 90 %}{% set h_cls = 'near-limit' %}
+  {% elif p >= 50 %}{% set h_cls = 'on-track' %}
+  {% else %}{% set h_cls = 'under-50' %}
+  {% endif %}
+{% endif %}
+<div class="progress-bar-wrap" role="progressbar" aria-valuenow="{{ p }}" aria-valuemin="0" aria-valuemax="100" aria-label="Progress {{ p }}%">
+  <div class="progress-track">
+    <div class="progress-fill {{ h_cls }}" style="width: {{ [100, p] | min }}%;"></div>
+  </div>
+  {% if show_label %}
+  <span class="progress-pct-label">{{ p | round(1) }}%</span>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# 5. Avatar Macro #}
+{% macro avatar(name, size=32) %}
+{% set bg, fg = name | avatar_color %}
+{% set inits = name | initials %}
+<div class="avatar" style="background-color: {{ bg }}; color: {{ fg }}; width: {{ size }}px; height: {{ size }}px; font-size: {{ (size * 0.38) | round }}px;" title="{{ name }}">
+  {{ inits }}
+</div>
+{% endmacro %}
+
+{# 6. Empty State Macro #}
+{% macro empty_state(title, description, icon='folder', action_url='', action_label='') %}
+<div class="empty-state">
+  <div class="empty-icon-circle">
+    <svg class="icon" style="width: 28px; height: 28px;"><use href="/static/img/icons.svg#{{ icon }}"/></svg>
+  </div>
+  <div class="empty-title">{{ title }}</div>
+  <div class="empty-desc">{{ description }}</div>
+  {% if action_url and action_label %}
+  <a href="{{ action_url }}" class="btn btn-primary btn-sm">{{ action_label }}</a>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# 7. Pagination Macro #}
+{% macro pagination(page, total_pages, total_items, page_size, current_url) %}
+{% if total_items > 0 %}
+<div class="pagination">
+  <div>
+    Showing {{ ((page - 1) * page_size) + 1 }}–{{ [page * page_size, total_items] | min }} of {{ total_items }}
+  </div>
+  <div class="pagination-controls">
+    {% if page > 1 %}
+    <a href="{{ current_url }}page={{ page - 1 }}" class="btn btn-secondary btn-sm" aria-label="Previous Page">
+      <svg class="icon"><use href="/static/img/icons.svg#chevron-left"/></svg>
+    </a>
+    {% else %}
+    <button class="btn btn-secondary btn-sm" disabled aria-label="Previous Page">
+      <svg class="icon"><use href="/static/img/icons.svg#chevron-left"/></svg>
+    </button>
+    {% endif %}
+
+    <span style="font-size: 13px; font-weight: 600; padding: 0 8px;">Page {{ page }} of {{ [1, total_pages] | max }}</span>
+
+    {% if page < total_pages %}
+    <a href="{{ current_url }}page={{ page + 1 }}" class="btn btn-secondary btn-sm" aria-label="Next Page">
+      <svg class="icon"><use href="/static/img/icons.svg#chevron-right"/></svg>
+    </a>
+    {% else %}
+    <button class="btn btn-secondary btn-sm" disabled aria-label="Next Page">
+      <svg class="icon"><use href="/static/img/icons.svg#chevron-right"/></svg>
+    </button>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endmacro %}

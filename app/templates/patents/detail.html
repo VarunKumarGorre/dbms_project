@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}{{ data.patent.title }}{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <a href="{{ url_for('patents.index') }}">Patents</a>
+  <span class="separator">/</span>
+  <span class="current">{{ data.patent.application_number }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <div style="display: flex; align-items: center; gap: var(--s2); margin-bottom: 4px;">
+      {{ ui.badge(data.patent.status, data.patent.status) }}
+      <span style="font-family: var(--font-mono); font-size: 13px; color: var(--text-muted);">
+        {{ data.patent.jurisdiction }} &middot; App #: <code>{{ data.patent.application_number }}</code>
+      </span>
+      {% if data.patent.patent_number %}
+      <span style="font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--success-ink);">
+        Patent #: {{ data.patent.patent_number }}
+      </span>
+      {% endif %}
+    </div>
+    <h1 style="font-size: 22px;">{{ data.patent.title }}</h1>
+    <p class="text-muted small" style="margin-top: 4px;">
+      Filed on {{ data.patent.filing_date | date_short }}
+      {% if data.patent.grant_date %}&middot; Granted on {{ data.patent.grant_date | date_short }}{% endif %}
+    </p>
+  </div>
+  {% if session.get('role') in ['ADMIN', 'RESEARCH_OFFICER'] %}
+  <div class="page-header-actions">
+    <button type="button" class="btn btn-secondary btn-sm" data-modal-open="change-patent-status-modal">
+      Change status
+    </button>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Stepper Progress Bar -->
+<div class="card" style="margin-bottom: var(--s5);">
+  <div class="card-header">
+    <h2 class="card-title">Patent Examination Lifecycle</h2>
+  </div>
+  <div class="stepper" style="margin-bottom: 0;">
+    <div class="step-item {{ 'done' if data.patent.status in ['Filed', 'Published', 'Granted'] else 'active' }}">
+      <div class="step-num">1</div>
+      <span>Filed</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item {{ 'done' if data.patent.status in ['Published', 'Granted'] else ('active' if data.patent.status == 'Published' else '') }}">
+      <div class="step-num">2</div>
+      <span>Published</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item {{ 'done' if data.patent.status == 'Granted' else '' }}">
+      <div class="step-num">3</div>
+      <span>Granted</span>
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 7fr 5fr; gap: var(--s5);">
+  <!-- Inventors -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Inventors</h2>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: var(--s3);">
+      {% for inv in data.inventors %}
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
+        <div style="display: flex; align-items: center; gap: var(--s3);">
+          {{ ui.avatar(inv.name, 32) }}
+          <div>
+            <div style="font-weight: 600;">
+              <a href="{{ url_for('investigators.detail', id=inv.researcher_id) }}">{{ inv.name }}</a>
+            </div>
+            <div class="small text-muted">{{ inv.dept_name }} &middot; {{ inv.designation }}</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Affiliated Projects -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Affiliated Research Projects</h2>
+    </div>
+    {% if data.linked_projects %}
+    <div style="display: flex; flex-direction: column; gap: var(--s3);">
+      {% for p in data.linked_projects %}
+      <div style="padding-bottom: var(--s2); border-bottom: 1px solid var(--border);">
+        <a href="{{ url_for('projects.detail', id=p.project_id) }}" style="font-weight: 600;">
+          <code>{{ p.project_code }}</code> &middot; {{ p.title }}
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      {{ ui.empty_state("No projects linked", "This patent is not linked to any projects.", "folder") }}
+    {% endif %}
+  </div>
+</div>
+
+<!-- Change Status Modal -->
+<div class="modal-backdrop" id="change-patent-status-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title">Update Patent Status</h3>
+      <button type="button" class="btn-icon" data-modal-close aria-label="Close modal"><svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#x"/></svg></button>
+    </div>
+    <form action="{{ url_for('patents.change_status', id=data.patent.patent_id) }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="pat-status-select">Status</label>
+          <select name="status" id="pat-status-select" class="select" required>
+            <option value="Filed" {% if data.patent.status == 'Filed' %}selected{% endif %}>Filed</option>
+            <option value="Published" {% if data.patent.status == 'Published' %}selected{% endif %}>Published</option>
+            <option value="Granted" {% if data.patent.status == 'Granted' %}selected{% endif %}>Granted</option>
+            <option value="Rejected" {% if data.patent.status == 'Rejected' %}selected{% endif %}>Rejected</option>
+            <option value="Lapsed" {% if data.patent.status == 'Lapsed' %}selected{% endif %}>Lapsed</option>
+          </select>
+        </div>
+        <div id="modal-granted-fields" style="display: none; flex-direction: column; gap: var(--s3);">
+          <div class="form-group">
+            <label class="form-label" for="modal-pat-num">Patent Number</label>
+            <input type="text" name="patent_number" id="modal-pat-num" class="input" value="{{ data.patent.patent_number or '' }}" placeholder="e.g. IN 412345">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="modal-grant-date">Grant Date</label>
+            <input type="date" name="grant_date" id="modal-grant-date" class="input" value="{{ data.patent.grant_date or '' }}">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Update Status</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const statusSel = document.getElementById("pat-status-select");
+    const grantedFields = document.getElementById("modal-granted-fields");
+    const patNo = document.getElementById("modal-pat-num");
+    const grantDate = document.getElementById("modal-grant-date");
+
+    function checkModalStatus() {
+      if (statusSel.value === "Granted") {
+        grantedFields.style.display = "flex";
+        patNo.required = true;
+        grantDate.required = true;
+      } else {
+        grantedFields.style.display = "none";
+        patNo.required = false;
+        grantDate.required = false;
+      }
+    }
+    statusSel.addEventListener("change", checkModalStatus);
+    checkModalStatus();
+  });
+</script>
+{% endblock %}

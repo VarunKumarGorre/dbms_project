@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% set no_shell = true %}
+
+{% block title %}500 Internal Server Error{% endblock %}
+
+{% block content %}
+<div class="error-page-wrap">
+  <div class="error-card">
+    <div class="error-code">500</div>
+    <h1 class="error-title">Internal Server Error</h1>
+    <p class="error-desc">An unexpected server error occurred while processing your transaction. Reference ID: <code class="font-mono" style="font-weight: 600;">RPGMS-ERR-500</code>.</p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary" style="display: inline-flex; justify-content: center;">
+      Back to Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}

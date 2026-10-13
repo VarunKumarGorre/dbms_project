@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Record Expense{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <a href="{{ url_for('expenditure.index') }}">Expenditure</a>
+  <span class="separator">/</span>
+  <span class="current">Record expense</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<form action="{{ url_for('expenditure.new_expense') }}" method="POST" id="record-expense-form" class="warn-unsaved">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Record an expense</h1>
+      <p class="text-muted small">Post a verified disbursement voucher against a sanctioned grant award</p>
+    </div>
+    <div class="page-header-actions">
+      <a href="{{ url_for('expenditure.index') }}" class="btn btn-secondary btn-sm">Cancel</a>
+      <button type="submit" class="btn btn-primary btn-sm" id="exp-submit-btn">Record expense</button>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 7fr 5fr; gap: var(--s5);">
+    <!-- Left: Expense Details Form -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Expense Details</h2>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="exp-grant-select">Grant Award <span class="req">*</span></label>
+        <select name="grant_id" id="exp-grant-select" class="select" required>
+          <option value="">-- Select Grant --</option>
+          {% for g in grants %}
+          <option value="{{ g.grant_id }}" {% if preselected_grant_id == g.grant_id %}selected{% endif %}>
+            {{ g.grant_number }} ({{ g.project_code }}) &middot; {{ g.agency_code }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="exp-head-select">Budget Head <span class="req">*</span></label>
+        <select name="head_id" id="exp-head-select" class="select" required>
+          <option value="">-- Select Budget Head --</option>
+        </select>
+        <span class="field-help">Expense can only be debited from an allocated head (BR-15).</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4);">
+        <div class="form-group">
+          <label class="form-label" for="exp-date-input">Expense Date <span class="req">*</span></label>
+          <input type="date" name="expense_date" id="exp-date-input" class="input" required>
+          <span class="field-help">Must be within grant duration (BR-07).</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="exp-amount-input">Amount (INR) <span class="req">*</span></label>
+          <div class="money-input-wrapper">
+            <span class="money-prefix">₹</span>
+            <input type="text" name="amount" id="exp-amount-input" class="input input-money" required placeholder="0.00">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="voucher_no">Voucher Number <span class="req">*</span></label>
+        <input type="text" name="voucher_no" id="voucher_no" class="input" required placeholder="e.g. V-2026-0417" style="max-width: 260px; font-family: var(--font-mono);">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="description">Description <span class="req">*</span></label>
+        <textarea name="description" id="description" class="textarea" required placeholder="Vendor, invoice details, purpose of expenditure..."></textarea>
+      </div>
+    </div>
+
+    <!-- Right: Live Budget Position -->
+    <div>
+      <div class="card" style="position: sticky; top: 80px;">
+        <div class="card-header">
+          <h2 class="card-title">Budget Position (Live)</h2>
+          <span id="live-grant-code" class="small text-muted font-bold">—</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: var(--s3); font-size: 13px; border-bottom: 1px solid var(--border); padding-bottom: var(--s4); margin-bottom: var(--s4);">
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">Grant Total:</span>
+            <span class="font-bold tabular-nums" id="live-grant-total">—</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">Spent so far:</span>
+            <span class="tabular-nums" id="live-grant-spent">—</span>
+          </div>
+        </div>
+
+        <h3 style="font-size: 13.5px; margin-bottom: var(--s3);">Selected Budget Head</h3>
+        <div style="display: flex; flex-direction: column; gap: var(--s2); font-size: 13px; border-bottom: 1px solid var(--border); padding-bottom: var(--s4); margin-bottom: var(--s4);">
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">Allocated:</span>
+            <span class="tabular-nums font-bold" id="live-head-allocated">—</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">Spent:</span>
+            <span class="tabular-nums" id="live-head-spent">—</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span class="text-muted">Remaining:</span>
+            <span class="tabular-nums font-bold" id="live-head-remaining">—</span>
+          </div>
+        </div>
+
+        <div style="background: var(--surface-2); padding: var(--s3); border-radius: var(--radius-sm); margin-bottom: var(--s3);">
+          <div style="display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 700;">
+            <span>After this entry:</span>
+            <span id="live-after-entry" class="tabular-nums">—</span>
+          </div>
+        </div>
+
+        <div id="live-budget-warning" class="field-error" style="display: none; font-size: 13px; font-weight: 600;"></div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pages/expenditure.js') }}"></script>
+{% endblock %}

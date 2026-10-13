@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Add Patent{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <a href="{{ url_for('patents.index') }}">Patents</a>
+  <span class="separator">/</span>
+  <span class="current">New patent</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<form action="{{ url_for('patents.new_patent') }}" method="POST" id="patent-form" class="warn-unsaved">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Register patent</h1>
+      <p class="text-muted small">Record invention intellectual property filing or granted letters patent</p>
+    </div>
+    <div class="page-header-actions">
+      <a href="{{ url_for('patents.index') }}" class="btn btn-secondary btn-sm">Cancel</a>
+      <button type="submit" class="btn btn-primary btn-sm">Save patent</button>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 7fr 5fr; gap: var(--s5);">
+    <div style="display: flex; flex-direction: column; gap: var(--s5);">
+      <!-- Patent Details -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Patent Specification</h2>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="title">Invention Title <span class="req">*</span></label>
+          <input type="text" name="title" id="title" class="input" required placeholder="Title of the invention">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4);">
+          <div class="form-group">
+            <label class="form-label" for="application_number">Application Number <span class="req">*</span></label>
+            <input type="text" name="application_number" id="application_number" class="input" required placeholder="e.g. 202411012345" style="font-family: var(--font-mono);">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="jurisdiction">Jurisdiction <span class="req">*</span></label>
+            <input type="text" name="jurisdiction" id="jurisdiction" class="input" value="India" required>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4);">
+          <div class="form-group">
+            <label class="form-label" for="filing_date">Filing Date <span class="req">*</span></label>
+            <input type="date" name="filing_date" id="filing_date" class="input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="status-select">Status <span class="req">*</span></label>
+            <select name="status" id="status-select" class="select" required>
+              <option value="Filed">Filed</option>
+              <option value="Published">Published</option>
+              <option value="Granted">Granted</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Lapsed">Lapsed</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Conditional Granted Fields (BR-14) -->
+        <div id="granted-fields" style="display: none; grid-template-columns: 1fr 1fr; gap: var(--s4); padding-top: var(--s3); border-top: 1px solid var(--border);">
+          <div class="form-group">
+            <label class="form-label" for="patent_number">Patent Number <span class="req">*</span></label>
+            <input type="text" name="patent_number" id="patent_number" class="input" placeholder="e.g. IN 412345">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="grant_date">Grant Date <span class="req">*</span></label>
+            <input type="date" name="grant_date" id="grant_date" class="input">
+          </div>
+        </div>
+      </div>
+
+      <!-- Inventors Repeater -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Inventors</h2>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-add-inventor">+ Add inventor</button>
+        </div>
+        <div id="inventors-list" style="display: flex; flex-direction: column; gap: var(--s2);">
+          <div class="inventor-row" style="display: flex; align-items: center; gap: var(--s3); padding: var(--s2); background: var(--surface-2); border-radius: var(--radius-sm);">
+            <input type="text" class="input researcher-typeahead-input" placeholder="Search researcher by name..." required style="flex: 1;">
+            <input type="hidden" name="inventor_ids[]" class="inventor-id-hidden">
+            <button type="button" class="btn btn-ghost btn-sm btn-remove-inventor">
+              <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#trash"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Linked Projects -->
+    <div>
+      <div class="card" style="position: sticky; top: 80px;">
+        <div class="card-header">
+          <h2 class="card-title">Linked Projects</h2>
+        </div>
+        <p class="small text-muted" style="margin-bottom: var(--s4);">
+          Link research projects that gave rise to this invention.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label" for="project-search-input">Add Project</label>
+          <input type="text" class="input" id="project-search-input" placeholder="Type project code..." autocomplete="off">
+        </div>
+
+        <div id="linked-projects-chips" style="display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s3);"></div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // 1. Status Toggle for Granted Fields (BR-14)
+    const statusSelect = document.getElementById("status-select");
+    const grantedFields = document.getElementById("granted-fields");
+    const patentNo = document.getElementById("patent_number");
+    const grantDate = document.getElementById("grant_date");
+
+    function checkStatus() {
+      if (statusSelect.value === "Granted") {
+        grantedFields.style.display = "grid";
+        patentNo.required = true;
+        grantDate.required = true;
+      } else {
+        grantedFields.style.display = "none";
+        patentNo.required = false;
+        grantDate.required = false;
+      }
+    }
+    statusSelect.addEventListener("change", checkStatus);
+    checkStatus();
+
+    // 2. Inventors Repeater
+    const invList = document.getElementById("inventors-list");
+    const addInvBtn = document.getElementById("btn-add-inventor");
+
+    function bindInvRow(row) {
+      const rm = row.querySelector(".btn-remove-inventor");
+      if (rm) rm.addEventListener("click", () => row.remove());
+      const inp = row.querySelector(".researcher-typeahead-input");
+      const hid = row.querySelector(".inventor-id-hidden");
+      if (inp && hid) {
+        new Typeahead(inp, {
+          endpoint: (q) => `/api/researchers/search?q=${encodeURIComponent(q)}&active=1`,
+          targetIdInput: hid
+        });
+      }
+    }
+    document.querySelectorAll(".inventor-row").forEach(bindInvRow);
+
+    if (addInvBtn && invList) {
+      addInvBtn.addEventListener("click", () => {
+        const row = document.createElement("div");
+        row.className = "inventor-row";
+        row.style.cssText = "display: flex; align-items: center; gap: var(--s3); padding: var(--s2); background: var(--surface-2); border-radius: var(--radius-sm);";
+        row.innerHTML = `
+          <input type="text" class="input researcher-typeahead-input" placeholder="Search researcher by name..." required style="flex: 1;">
+          <input type="hidden" name="inventor_ids[]" class="inventor-id-hidden">
+          <button type="button" class="btn btn-ghost btn-sm btn-remove-inventor">
+            <svg class="icon"><use href="/static/img/icons.svg#trash"/></svg>
+          </button>
+        `;
+        invList.appendChild(row);
+        bindInvRow(row);
+      });
+    }
+
+    // 3. Linked Projects Typeahead
+    const projSearch = document.getElementById("project-search-input");
+    const chipsContainer = document.getElementById("linked-projects-chips");
+    if (projSearch && chipsContainer) {
+      new Typeahead(projSearch, {
+        endpoint: (q) => `/api/projects/search?q=${encodeURIComponent(q)}`,
+        onSelect: (p) => {
+          if (chipsContainer.querySelector(`[data-id="${p.id}"]`)) return;
+          const chip = document.createElement("div");
+          chip.className = "project-chip";
+          chip.dataset.id = p.id;
+          chip.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--surface-2); border-radius: var(--radius-sm); border: 1px solid var(--border);";
+          chip.innerHTML = `
+            <div>
+              <span class="font-bold"><code>${p.code}</code></span>
+              <div class="small text-muted">${p.title}</div>
+            </div>
+            <input type="hidden" name="linked_project_ids[]" value="${p.id}">
+            <button type="button" class="btn-icon" onclick="this.closest('.project-chip').remove();" style="width: 24px; height: 24px;">
+              <svg class="icon" style="width: 14px; height: 14px;"><use href="/static/img/icons.svg#x"/></svg>
+            </button>
+          `;
+          chipsContainer.appendChild(chip);
+          projSearch.value = "";
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

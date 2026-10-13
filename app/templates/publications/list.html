@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Publications{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <span class="current">Publications</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Publications</h1>
+    <p class="text-muted small">Peer-reviewed scholarly output, conference proceedings and journal articles</p>
+  </div>
+  {% if role in ['ADMIN', 'RESEARCH_OFFICER'] %}
+  <div class="page-header-actions">
+    <a href="{{ url_for('publications.new_publication') }}" class="btn btn-primary btn-sm">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#plus"/></svg>
+      Add publication
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" action="{{ url_for('publications.index') }}" class="filter-bar">
+  <div style="flex: 1; min-width: 200px; position: relative;">
+    <svg class="icon" style="position: absolute; left: 10px; top: 10px; color: var(--text-muted);"><use href="{{ url_for('static', filename='img/icons.svg') }}#search"/></svg>
+    <input type="text" name="q" value="{{ filters.q }}" class="input" style="padding-left: 36px; width: 100%;" placeholder="Search title, DOI, venue...">
+  </div>
+
+  <select name="year" class="select" onchange="this.form.submit()">
+    <option value="">All Years</option>
+    {% for y in years %}
+    <option value="{{ y }}" {% if filters.year == y|string %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="type" class="select" onchange="this.form.submit()">
+    <option value="All" {% if filters.type == 'All' %}selected{% endif %}>All Types</option>
+    <option value="Journal" {% if filters.type == 'Journal' %}selected{% endif %}>Journal</option>
+    <option value="Conference" {% if filters.type == 'Conference' %}selected{% endif %}>Conference</option>
+    <option value="Book Chapter" {% if filters.type == 'Book Chapter' %}selected{% endif %}>Book Chapter</option>
+    <option value="Patent" {% if filters.type == 'Patent' %}selected{% endif %}>Patent Paper</option>
+  </select>
+
+  <select name="indexing" class="select" onchange="this.form.submit()">
+    <option value="All" {% if filters.indexing == 'All' %}selected{% endif %}>All Indexing</option>
+    <option value="SCIE" {% if filters.indexing == 'SCIE' %}selected{% endif %}>SCIE</option>
+    <option value="Scopus" {% if filters.indexing == 'Scopus' %}selected{% endif %}>Scopus</option>
+    <option value="UGC-CARE" {% if filters.indexing == 'UGC-CARE' %}selected{% endif %}>UGC-CARE</option>
+    <option value="Other" {% if filters.indexing == 'Other' %}selected{% endif %}>Other</option>
+  </select>
+
+  <select name="dept_id" class="select" onchange="this.form.submit()">
+    <option value="">All Departments</option>
+    {% for d in departments %}
+    <option value="{{ d.dept_id }}" {% if filters.dept_id == d.dept_id|string %}selected{% endif %}>{{ d.dept_name }}</option>
+    {% endfor %}
+  </select>
+
+  <a href="{{ url_for('publications.index') }}" class="btn btn-ghost btn-sm">Clear filters</a>
+</form>
+
+<!-- Publications Table -->
+{% if publications %}
+<div class="table-container">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Type</th>
+        <th>Venue</th>
+        <th>Year</th>
+        <th>Indexing</th>
+        <th>Authors</th>
+        <th>Projects</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pub in publications %}
+      <tr onclick="window.location='{{ url_for('publications.detail', id=pub.publication_id) }}';" style="cursor: pointer;">
+        <td>
+          <div style="font-weight: 600; font-size: 14px; max-width: 380px;">{{ pub.title }}</div>
+          {% if pub.doi %}
+          <div class="small" style="font-family: var(--font-mono); color: var(--primary); margin-top: 2px;">
+            doi: {{ pub.doi }}
+          </div>
+          {% endif %}
+        </td>
+        <td>{{ pub.publication_type }}</td>
+        <td>{{ pub.venue }}</td>
+        <td>{{ pub.publication_date | date_short }}</td>
+        <td>{{ ui.badge(pub.indexing, 'info') }}</td>
+        <td>
+          <div class="avatar-stack">
+            {% for a in pub.authors[:4] %}
+              {{ ui.avatar(a.name, 26) }}
+            {% endfor %}
+            {% if pub.authors | length > 4 %}
+              <div class="avatar" style="background: var(--neutral-soft); color: var(--neutral-ink); width: 26px; height: 26px; font-size: 10px;">
+                +{{ pub.authors | length - 4 }}
+              </div>
+            {% endif %}
+          </div>
+        </td>
+        <td>
+          {% for p in pub.linked_projects %}
+          <a href="{{ url_for('projects.detail', id=p.project_id) }}" onclick="event.stopPropagation();" style="display: inline-block; margin: 1px 2px;">
+            <code>{{ p.project_code }}</code>
+          </a>
+          {% else %}
+          <span class="text-muted">—</span>
+          {% endfor %}
+        </td>
+        <td>
+          <a href="{{ url_for('publications.detail', id=pub.publication_id) }}" class="btn btn-ghost btn-sm">
+            <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#chevron-right"/></svg>
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{{ ui.pagination(page, total_pages, total, page_size, url_for('publications.index', sort=sort_key, dir=sort_dir, **filters) ~ '&') }}
+
+{% else %}
+  {{ ui.empty_state("No publications found", "Try clearing your search filters.", "book", url_for('publications.index'), "Clear filters") }}
+{% endif %}
+{% endblock %}

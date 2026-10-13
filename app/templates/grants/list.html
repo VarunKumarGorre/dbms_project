@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Grants & Budget{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <span class="current">Grants & Budget</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Grants & Budget</h1>
+    <p class="text-muted small">Sanctioned research awards, funding agencies and budget balances</p>
+  </div>
+  {% if role in ['ADMIN', 'RESEARCH_OFFICER'] %}
+  <div class="page-header-actions">
+    <a href="{{ url_for('grants.new_grant') }}" class="btn btn-primary btn-sm">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#plus"/></svg>
+      New grant
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" action="{{ url_for('grants.index') }}" class="filter-bar">
+  <div style="flex: 1; min-width: 220px; position: relative;">
+    <svg class="icon" style="position: absolute; left: 10px; top: 10px; color: var(--text-muted);"><use href="{{ url_for('static', filename='img/icons.svg') }}#search"/></svg>
+    <input type="text" name="q" value="{{ filters.q }}" class="input" style="padding-left: 36px; width: 100%;" placeholder="Search grant no., project...">
+  </div>
+
+  <select name="agency_id" class="select" onchange="this.form.submit()">
+    <option value="">All Agencies</option>
+    {% for a in agencies %}
+    <option value="{{ a.agency_id }}" {% if filters.agency_id == a.agency_id|string %}selected{% endif %}>{{ a.agency_name }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="status" class="select" onchange="this.form.submit()">
+    <option value="All" {% if filters.status == 'All' %}selected{% endif %}>All Statuses</option>
+    <option value="Sanctioned" {% if filters.status == 'Sanctioned' %}selected{% endif %}>Sanctioned</option>
+    <option value="Active" {% if filters.status == 'Active' %}selected{% endif %}>Active</option>
+    <option value="Closed" {% if filters.status == 'Closed' %}selected{% endif %}>Closed</option>
+    <option value="Terminated" {% if filters.status == 'Terminated' %}selected{% endif %}>Terminated</option>
+  </select>
+
+  <select name="health" class="select" onchange="this.form.submit()">
+    <option value="All" {% if filters.health == 'All' %}selected{% endif %}>All Health</option>
+    <option value="Under 50%" {% if filters.health == 'Under 50%' %}selected{% endif %}>Under 50%</option>
+    <option value="On Track" {% if filters.health == 'On Track' %}selected{% endif %}>On Track</option>
+    <option value="Near Limit" {% if filters.health == 'Near Limit' %}selected{% endif %}>Near Limit</option>
+    <option value="Exhausted" {% if filters.health == 'Exhausted' %}selected{% endif %}>Exhausted</option>
+  </select>
+
+  <a href="{{ url_for('grants.index') }}" class="btn btn-ghost btn-sm">Clear filters</a>
+</form>
+
+<!-- Grants Table -->
+{% if grants %}
+<div class="table-container">
+  <table class="table">
+    <thead>
+      <tr>
+        <th><a href="{{ url_for('grants.index', sort='grant_number', dir='desc' if sort_key == 'grant_number' and sort_dir == 'asc' else 'asc', **filters) }}">Grant No.</a></th>
+        <th><a href="{{ url_for('grants.index', sort='project', dir='desc' if sort_key == 'project' and sort_dir == 'asc' else 'asc', **filters) }}">Project</a></th>
+        <th><a href="{{ url_for('grants.index', sort='agency', dir='desc' if sort_key == 'agency' and sort_dir == 'asc' else 'asc', **filters) }}">Agency</a></th>
+        <th class="text-right"><a href="{{ url_for('grants.index', sort='amount', dir='desc' if sort_key == 'amount' and sort_dir == 'asc' else 'asc', **filters) }}">Sanctioned</a></th>
+        <th class="text-right"><a href="{{ url_for('grants.index', sort='spent', dir='desc' if sort_key == 'spent' and sort_dir == 'asc' else 'asc', **filters) }}">Spent</a></th>
+        <th class="text-right"><a href="{{ url_for('grants.index', sort='balance', dir='desc' if sort_key == 'balance' and sort_dir == 'asc' else 'asc', **filters) }}">Balance</a></th>
+        <th style="min-width: 140px;">Utilization</th>
+        <th>Health</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in grants %}
+      <tr onclick="window.location='{{ url_for('grants.detail', id=g.grant_id) }}';" style="cursor: pointer;">
+        <td class="font-bold"><code>{{ g.grant_number }}</code></td>
+        <td>
+          <a href="{{ url_for('projects.detail', id=g.project_id) }}" onclick="event.stopPropagation();">
+            <code>{{ g.project_code }}</code>
+          </a>
+        </td>
+        <td>{{ g.agency_code }}</td>
+        <td class="text-right tabular-nums font-bold">{{ g.grant_amount | inr_compact }}</td>
+        <td class="text-right tabular-nums">{{ g.spent_amount | inr_compact }}</td>
+        <td class="text-right tabular-nums font-bold" style="color: {{ 'var(--danger)' if g.balance_amount <= 0 else 'var(--text)' }};">
+          {{ g.balance_amount | inr_compact }}
+        </td>
+        <td>{{ ui.progress_bar(g.spent_pct, g.health_class) }}</td>
+        <td>{{ ui.badge(g.health_class, g.health_class) }}</td>
+        <td>
+          <a href="{{ url_for('grants.detail', id=g.grant_id) }}" class="btn btn-ghost btn-sm">
+            <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#chevron-right"/></svg>
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{{ ui.pagination(page, total_pages, total, page_size, url_for('grants.index', sort=sort_key, dir=sort_dir, **filters) ~ '&') }}
+
+{% else %}
+  {{ ui.empty_state("No grants found", "Try clearing your search filters.", "wallet", url_for('grants.index'), "Clear filters") }}
+{% endif %}
+{% endblock %}

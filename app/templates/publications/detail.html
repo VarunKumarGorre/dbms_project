@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}{{ data.publication.title }}{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <a href="{{ url_for('publications.index') }}">Publications</a>
+  <span class="separator">/</span>
+  <span class="current">{{ data.publication.title[:30] }}...</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <div style="display: flex; align-items: center; gap: var(--s2); margin-bottom: 4px;">
+      {{ ui.badge(data.publication.publication_type, 'neutral') }}
+      {{ ui.badge(data.publication.indexing, 'info') }}
+    </div>
+    <h1 style="font-size: 22px;">{{ data.publication.title }}</h1>
+    <p class="text-muted small" style="margin-top: 4px;">
+      Published in <strong>{{ data.publication.venue }}</strong> &middot; {{ data.publication.publication_date | date_short }}
+      {% if data.publication.issn_isbn %}&middot; ISSN/ISBN: <code>{{ data.publication.issn_isbn }}</code>{% endif %}
+    </p>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 7fr 5fr; gap: var(--s5);">
+  <!-- Authors List -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Authors & Formal Attribution</h2>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: var(--s3);">
+      {% for a in data.authors %}
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
+        <div style="display: flex; align-items: center; gap: var(--s3);">
+          <span style="font-weight: 700; width: 20px; color: var(--text-muted);">{{ a.author_order }}</span>
+          {{ ui.avatar(a.name, 32) }}
+          <div>
+            <div style="font-weight: 600;">
+              <a href="{{ url_for('investigators.detail', id=a.researcher_id) }}">{{ a.name }}</a>
+              {% if a.is_corresponding %}
+              <span style="background: var(--primary-soft); color: var(--primary); font-size: 11px; padding: 1px 6px; border-radius: 999px; margin-left: 6px; font-weight: 700;">Corresponding</span>
+              {% endif %}
+            </div>
+            <div class="small text-muted">{{ a.dept_name }} &middot; {{ a.email }}</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Identifiers & Affiliated Projects -->
+  <div style="display: flex; flex-direction: column; gap: var(--s5);">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Digital Identifiers</h2>
+      </div>
+      <div style="font-size: 13.5px; display: flex; flex-direction: column; gap: var(--s3);">
+        {% if data.publication.doi %}
+        <div style="display: flex; justify-content: space-between;">
+          <span class="text-muted">DOI:</span>
+          <a href="https://doi.org/{{ data.publication.doi }}" target="_blank" rel="noopener" style="font-family: var(--font-mono); font-weight: 600;">
+            {{ data.publication.doi }} &nearr;
+          </a>
+        </div>
+        {% else %}
+        <span class="text-muted">No DOI registered for this publication.</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Affiliated Research Projects</h2>
+      </div>
+      {% if data.linked_projects %}
+      <div style="display: flex; flex-direction: column; gap: var(--s3);">
+        {% for p in data.linked_projects %}
+        <div style="padding-bottom: var(--s2); border-bottom: 1px solid var(--border);">
+          <a href="{{ url_for('projects.detail', id=p.project_id) }}" style="font-weight: 600;">
+            <code>{{ p.project_code }}</code> &middot; {{ p.title }}
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+        {{ ui.empty_state("No projects linked", "This publication is not linked to any institutional research projects.", "folder") }}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

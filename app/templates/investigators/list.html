@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Investigators{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <span class="current">Investigators</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Investigators</h1>
+    <p class="text-muted small">Researchers, scholars and their operational workload</p>
+  </div>
+  {% if role in ['ADMIN', 'RESEARCH_OFFICER'] %}
+  <div class="page-header-actions">
+    <a href="{{ url_for('investigators.new_researcher') }}" class="btn btn-primary btn-sm">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#plus"/></svg>
+      Add researcher
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" action="{{ url_for('investigators.index') }}" class="filter-bar">
+  <div style="flex: 1; min-width: 220px; position: relative;">
+    <svg class="icon" style="position: absolute; left: 10px; top: 10px; color: var(--text-muted);"><use href="{{ url_for('static', filename='img/icons.svg') }}#search"/></svg>
+    <input type="text" name="q" value="{{ filters.q }}" class="input" style="padding-left: 36px; width: 100%;" placeholder="Search name, email, ORCID...">
+  </div>
+
+  <select name="dept_id" class="select" onchange="this.form.submit()">
+    <option value="">All Departments</option>
+    {% for d in departments %}
+    <option value="{{ d.dept_id }}" {% if filters.dept_id == d.dept_id|string %}selected{% endif %}>{{ d.dept_name }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="designation" class="select" onchange="this.form.submit()">
+    <option value="All" {% if filters.designation == 'All' %}selected{% endif %}>All Designations</option>
+    {% for desig in designations %}
+    <option value="{{ desig }}" {% if filters.designation == desig %}selected{% endif %}>{{ desig }}</option>
+    {% endfor %}
+  </select>
+
+  <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; cursor: pointer;">
+    <input type="checkbox" name="active_only" value="1" {% if filters.active_only %}checked{% endif %} onchange="this.form.submit()">
+    Active only
+  </label>
+
+  <a href="{{ url_for('investigators.index') }}" class="btn btn-ghost btn-sm">Clear filters</a>
+</form>
+
+<!-- Investigators Table -->
+{% if investigators %}
+<div class="table-container">
+  <table class="table">
+    <thead>
+      <tr>
+        <th><a href="{{ url_for('investigators.index', sort='name', dir='desc' if sort_key == 'name' and sort_dir == 'asc' else 'asc', **filters) }}">Researcher</a></th>
+        <th><a href="{{ url_for('investigators.index', sort='dept', dir='desc' if sort_key == 'dept' and sort_dir == 'asc' else 'asc', **filters) }}">Dept</a></th>
+        <th><a href="{{ url_for('investigators.index', sort='designation', dir='desc' if sort_key == 'designation' and sort_dir == 'asc' else 'asc', **filters) }}">Designation</a></th>
+        <th>Status</th>
+        <th class="text-right"><a href="{{ url_for('investigators.index', sort='projects', dir='desc' if sort_key == 'projects' and sort_dir == 'asc' else 'asc', **filters) }}">Active Projects</a></th>
+        <th style="min-width: 160px;"><a href="{{ url_for('investigators.index', sort='workload', dir='desc' if sort_key == 'workload' and sort_dir == 'asc' else 'asc', **filters) }}">Workload</a></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inv in investigators %}
+      <tr onclick="window.location='{{ url_for('investigators.detail', id=inv.researcher_id) }}';" style="cursor: pointer; opacity: {{ '1' if inv.is_active else '0.6' }};">
+        <td>
+          <div style="display: flex; align-items: center; gap: var(--s2);">
+            {{ ui.avatar(inv.full_name, 28) }}
+            <div>
+              <div style="font-weight: 600;">{{ inv.full_name }}</div>
+              <div class="small text-muted">{{ inv.email }}</div>
+            </div>
+          </div>
+        </td>
+        <td><code>{{ inv.dept_code }}</code></td>
+        <td>{{ inv.designation }}</td>
+        <td>{{ ui.badge('Active' if inv.is_active else 'Inactive', 'success' if inv.is_active else 'neutral') }}</td>
+        <td class="text-right font-bold tabular-nums">{{ inv.active_projects_count }}</td>
+        <td>
+          {% set wl = inv.workload_percent %}
+          {% if wl >= 100 %}{% set wl_col = 'exhausted' %}
+          {% elif wl >= 70 %}{% set wl_col = 'near-limit' %}
+          {% else %}{% set wl_col = 'under-50' %}
+          {% endif %}
+          <div class="progress-bar-wrap">
+            <div class="progress-track">
+              <div class="progress-fill {{ wl_col }}" style="width: {{ [100, wl] | min }}%;"></div>
+            </div>
+            <span class="progress-pct-label">{{ wl | round(1) }}%</span>
+          </div>
+        </td>
+        <td>
+          <a href="{{ url_for('investigators.detail', id=inv.researcher_id) }}" class="btn btn-ghost btn-sm">
+            <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#chevron-right"/></svg>
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{{ ui.pagination(page, total_pages, total, page_size, url_for('investigators.index', sort=sort_key, dir=sort_dir, **filters) ~ '&') }}
+
+{% else %}
+  {{ ui.empty_state("No investigators found", "Try clearing your active search filters.", "users", url_for('investigators.index'), "Clear filters") }}
+{% endif %}
+{% endblock %}

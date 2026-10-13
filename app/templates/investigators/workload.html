@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}My Workload{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <span class="current">My Workload</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>My Project Workload</h1>
+    <p class="text-muted small">Commitment and assignments across your led research projects</p>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: var(--s5);">
+  <div class="card-header">
+    <h2 class="card-title">Personal Capacity Utilization</h2>
+    <span style="font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums;">
+      {{ data.total_workload }}% of 100%
+    </span>
+  </div>
+  <div style="margin-bottom: var(--s3);">
+    {{ ui.progress_bar(data.total_workload) }}
+  </div>
+  <p class="small text-muted">
+    Represents combined effort on your active and proposed projects. Cannot exceed 100% capacity under university research guidelines (BR-11).
+  </p>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Led Projects & Assigned Effort</h2>
+  </div>
+  {% if data.projects %}
+  <div class="table-container" style="border: none; box-shadow: none;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Project Code</th>
+          <th>Title</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th class="text-right">Effort (%)</th>
+          <th>Period</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in data.projects %}
+        <tr>
+          <td><a href="{{ url_for('projects.detail', id=p.project_id) }}"><code>{{ p.project_code }}</code></a></td>
+          <td class="font-bold">{{ p.title }}</td>
+          <td>{{ ui.badge(p.role, 'primary') }}</td>
+          <td>{{ ui.badge(p.status, p.status) }}</td>
+          <td class="text-right font-bold tabular-nums">{{ p.effort_percent }}%</td>
+          <td>{{ p.start_date | date_short }} – {{ p.end_date | date_short }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ ui.empty_state("No led projects", "You are not currently designated as Principal Investigator on any projects.", "folder") }}
+  {% endif %}
+</div>
+{% endblock %}

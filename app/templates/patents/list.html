@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}Patents{% endblock %}
+
+{% block topbar_left %}
+<div class="breadcrumb">
+  <span class="current">Patents</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Patents</h1>
+    <p class="text-muted small">Intellectual property filings, published patents and granted inventions</p>
+  </div>
+  {% if role in ['ADMIN', 'RESEARCH_OFFICER'] %}
+  <div class="page-header-actions">
+    <a href="{{ url_for('patents.new_patent') }}" class="btn btn-primary btn-sm">
+      <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#plus"/></svg>
+      Add patent
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" action="{{ url_for('patents.index') }}" class="filter-bar">
+  <div style="flex: 1; min-width: 200px; position: relative;">
+    <svg class="icon" style="position: absolute; left: 10px; top: 10px; color: var(--text-muted);"><use href="{{ url_for('static', filename='img/icons.svg') }}#search"/></svg>
+    <input type="text" name="q" value="{{ filters.q }}" class="input" style="padding-left: 36px; width: 100%;" placeholder="Search title or application number...">
+  </div>
+
+  <select name="status" class="select" onchange="this.form.submit()">
+    <option value="All" {% if filters.status == 'All' %}selected{% endif %}>All Statuses</option>
+    {% for s in statuses %}
+    <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="jurisdiction" class="select" onchange="this.form.submit()">
+    <option value="All" {% if filters.jurisdiction == 'All' %}selected{% endif %}>All Jurisdictions</option>
+    {% for j in jurisdictions %}
+    <option value="{{ j }}" {% if filters.jurisdiction == j %}selected{% endif %}>{{ j }}</option>
+    {% endfor %}
+  </select>
+
+  <a href="{{ url_for('patents.index') }}" class="btn btn-ghost btn-sm">Clear filters</a>
+</form>
+
+<!-- Patents 2-Column Grid -->
+{% if patents %}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s5);">
+  {% for pat in patents %}
+  <div class="card" onclick="window.location='{{ url_for('patents.detail', id=pat.patent_id) }}';" style="cursor: pointer; display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--s2);">
+        {{ ui.badge(pat.status, pat.status) }}
+        <span class="small font-bold" style="font-family: var(--font-mono);">
+          {{ pat.jurisdiction }} &middot; {{ pat.application_number }}
+        </span>
+      </div>
+
+      <h2 style="font-size: 15px; font-weight: 600; margin-bottom: var(--s3); line-height: 1.4;">
+        <a href="{{ url_for('patents.detail', id=pat.patent_id) }}">{{ pat.title }}</a>
+      </h2>
+
+      <!-- Stepper Progress Bar -->
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: var(--s4); font-size: 11px; font-weight: 600; color: var(--text-muted);">
+        <span style="color: {{ 'var(--success)' if pat.status in ['Filed', 'Published', 'Granted'] else 'inherit' }};">&bull; Filed</span>
+        <span style="flex: 1; height: 2px; background: var(--border);"></span>
+        <span style="color: {{ 'var(--success)' if pat.status in ['Published', 'Granted'] else 'inherit' }};">&bull; Published</span>
+        <span style="flex: 1; height: 2px; background: var(--border);"></span>
+        <span style="color: {{ 'var(--success)' if pat.status == 'Granted' else 'inherit' }};">&bull; Granted</span>
+      </div>
+    </div>
+
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: var(--s3); margin-top: var(--s3);">
+        <div class="avatar-stack">
+          {% for inv in pat.inventors %}
+            {{ ui.avatar(inv.name, 26) }}
+          {% endfor %}
+        </div>
+        <div class="small text-muted">
+          Filed: {{ pat.filing_date | date_short }}
+          {% if pat.grant_date %}&middot; Granted: {{ pat.grant_date | date_short }}{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{{ ui.pagination(page, total_pages, total, page_size, url_for('patents.index', sort=sort_key, dir=sort_dir, **filters) ~ '&') }}
+
+{% else %}
+  {{ ui.empty_state("No patents found", "No patent applications match these filters.", "award", url_for('patents.index'), "Clear filters") }}
+{% endif %}
+{% endblock %}

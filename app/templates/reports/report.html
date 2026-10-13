@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+{% import "_components.html" as ui %}
+
+{% block title %}{{ report.meta.code }} {{ report.meta.title }}{% endblock %}
+
+{% block content %}
+<div class="report-detail-page">
+  <!-- Page Header with Print & CSV Export Actions -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+        <span class="separator">/</span>
+        <a href="{{ url_for('reports.hub') }}">Reports</a>
+        <span class="separator">/</span>
+        <span class="current" aria-current="page">{{ report.meta.code }} {{ report.meta.title }}</span>
+      </nav>
+      <div style="display: flex; align-items: center; gap: var(--s3); margin-top: 4px;">
+        <span class="badge badge-primary">{{ report.meta.code }}</span>
+        <h1 style="margin: 0;">{{ report.meta.title }}</h1>
+      </div>
+      <p class="text-muted small" style="margin-top: 4px;">{{ report.meta.description }}</p>
+    </div>
+
+    <div class="page-header-actions">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="window.print()">
+        <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#printer"/></svg>
+        <span>Print</span>
+      </button>
+      
+      {# Build CSV export link preserving current filter query params #}
+      {% set csv_params = filters.copy() if filters else {} %}
+      {% set _ = csv_params.update({'format': 'csv'}) %}
+      <a href="{{ url_for('reports.show_report', code=report.meta.code | lower, **csv_params) }}" class="btn btn-primary btn-sm">
+        <svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#download"/></svg>
+        <span>Export CSV</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter Controls Bar -->
+  {% if report.meta.filter_fields %}
+  <div class="card" style="margin-bottom: var(--s5);">
+    <form method="GET" action="{{ url_for('reports.show_report', code=report.meta.code | lower) }}" class="filter-bar" style="border-bottom: none; padding: 0;">
+      <div style="display: flex; align-items: center; gap: var(--s2); font-size: 13px; font-weight: 600; color: var(--text-muted); margin-right: var(--s3);">
+        <svg class="icon" style="width: 16px; height: 16px;"><use href="{{ url_for('static', filename='img/icons.svg') }}#filter"/></svg>
+        <span>Filters:</span>
+      </div>
+
+      {% if 'status' in report.meta.filter_fields %}
+      <div class="filter-group">
+        <label for="filter-status" class="sr-only">Status</label>
+        <select id="filter-status" name="status" class="form-control form-control-sm">
+          <option value="All" {% if filters.status == 'All' %}selected{% endif %}>All Statuses</option>
+          {% if report.meta.code == 'R3' %}
+            <option value="Pending" {% if filters.status == 'Pending' %}selected{% endif %}>Pending</option>
+            <option value="In Progress" {% if filters.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+            <option value="Completed" {% if filters.status == 'Completed' %}selected{% endif %}>Completed</option>
+            <option value="Delayed" {% if filters.status == 'Delayed' %}selected{% endif %}>Delayed</option>
+            <option value="Cancelled" {% if filters.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+          {% else %}
+            <option value="Proposed" {% if filters.status == 'Proposed' %}selected{% endif %}>Proposed</option>
+            <option value="Active" {% if filters.status == 'Active' %}selected{% endif %}>Active</option>
+            <option value="Completed" {% if filters.status == 'Completed' %}selected{% endif %}>Completed</option>
+            <option value="Cancelled" {% if filters.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+          {% endif %}
+        </select>
+      </div>
+      {% endif %}
+
+      {% if 'dept_id' in report.meta.filter_fields and departments %}
+      <div class="filter-group">
+        <label for="filter-dept" class="sr-only">Department</label>
+        <select id="filter-dept" name="dept_id" class="form-control form-control-sm">
+          <option value="">All Departments</option>
+          {% for d in departments %}
+          <option value="{{ d.dept_id }}" {% if filters.dept_id == d.dept_id | string %}selected{% endif %}>{{ d.dept_code }} - {{ d.dept_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      {% if 'agency_id' in report.meta.filter_fields and agencies %}
+      <div class="filter-group">
+        <label for="filter-agency" class="sr-only">Funding Agency</label>
+        <select id="filter-agency" name="agency_id" class="form-control form-control-sm">
+          <option value="">All Agencies</option>
+          {% for a in agencies %}
+          <option value="{{ a.agency_id }}" {% if filters.agency_id == a.agency_id | string %}selected{% endif %}>{{ a.agency_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      {% if 'health' in report.meta.filter_fields %}
+      <div class="filter-group">
+        <label for="filter-health" class="sr-only">Budget Health</label>
+        <select id="filter-health" name="health" class="form-control form-control-sm">
+          <option value="All" {% if filters.health == 'All' %}selected{% endif %}>All Health States</option>
+          <option value="Safe" {% if filters.health == 'Safe' %}selected{% endif %}>Safe (&le; 70%)</option>
+          <option value="Caution" {% if filters.health == 'Caution' %}selected{% endif %}>Caution (70% &ndash; 90%)</option>
+          <option value="Critical" {% if filters.health == 'Critical' %}selected{% endif %}>Critical (&gt; 90%)</option>
+        </select>
+      </div>
+      {% endif %}
+
+      {% if 'year' in report.meta.filter_fields %}
+      <div class="filter-group">
+        <label for="filter-year" class="sr-only">Year</label>
+        <input type="number" id="filter-year" name="year" class="form-control form-control-sm" placeholder="Year e.g. 2024" value="{{ filters.year }}" min="2000" max="2099" style="width: 130px;">
+      </div>
+      {% endif %}
+
+      {% if 'indexing' in report.meta.filter_fields %}
+      <div class="filter-group">
+        <label for="filter-indexing" class="sr-only">Indexing</label>
+        <select id="filter-indexing" name="indexing" class="form-control form-control-sm">
+          <option value="All" {% if filters.indexing == 'All' %}selected{% endif %}>All Indexings</option>
+          <option value="SCIE" {% if filters.indexing == 'SCIE' %}selected{% endif %}>SCIE</option>
+          <option value="Scopus" {% if filters.indexing == 'Scopus' %}selected{% endif %}>Scopus</option>
+          <option value="UGC-CARE" {% if filters.indexing == 'UGC-CARE' %}selected{% endif %}>UGC-CARE</option>
+          <option value="Conference" {% if filters.indexing == 'Conference' %}selected{% endif %}>Conference</option>
+          <option value="Other" {% if filters.indexing == 'Other' %}selected{% endif %}>Other</option>
+        </select>
+      </div>
+      {% endif %}
+
+      {% if 'jurisdiction' in report.meta.filter_fields %}
+      <div class="filter-group">
+        <label for="filter-jurisdiction" class="sr-only">Jurisdiction</label>
+        <select id="filter-jurisdiction" name="jurisdiction" class="form-control form-control-sm">
+          <option value="All" {% if filters.jurisdiction == 'All' %}selected{% endif %}>All Jurisdictions</option>
+          <option value="India" {% if filters.jurisdiction == 'India' %}selected{% endif %}>India</option>
+          <option value="US" {% if filters.jurisdiction == 'US' %}selected{% endif %}>US</option>
+          <option value="EPO" {% if filters.jurisdiction == 'EPO' %}selected{% endif %}>EPO</option>
+          <option value="WIPO" {% if filters.jurisdiction == 'WIPO' %}selected{% endif %}>WIPO</option>
+        </select>
+      </div>
+      {% endif %}
+
+      {% if 'grant_id' in report.meta.filter_fields %}
+      <div class="filter-group">
+        <label for="filter-grant" class="sr-only">Grant ID</label>
+        <input type="text" id="filter-grant" name="grant_id" class="form-control form-control-sm" placeholder="Grant ID" value="{{ filters.grant_id }}" style="width: 120px;">
+      </div>
+      {% endif %}
+
+      <div style="display: flex; gap: var(--s2); margin-left: auto;">
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        <a href="{{ url_for('reports.show_report', code=report.meta.code | lower) }}" class="btn btn-secondary btn-sm">Clear</a>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- KPI Summary Tiles -->
+  {% if report.tiles %}
+  <div class="dashboard-kpis" style="grid-template-columns: repeat({{ report.tiles | length }}, 1fr); margin-bottom: var(--s5);">
+    {% for t in report.tiles %}
+      {% set is_currency = 'amount' in t.label | lower or 'sanctioned' in t.label | lower or 'spent' in t.label | lower or 'balance' in t.label | lower or 'funding' in t.label | lower %}
+      {{ ui.kpi_card(
+        label=t.label,
+        value=t.value,
+        is_money=is_currency
+      ) }}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Chart Visualization -->
+  {% if report.chart and report.chart.labels %}
+  <div class="card" style="margin-bottom: var(--s5);">
+    <div class="card-header">
+      <h2 class="card-title">{{ report.meta.title }} &mdash; Visualization</h2>
+      <span class="badge badge-neutral">{{ report.chart.type }}</span>
+    </div>
+    <div style="position: relative; height: 340px; width: 100%;">
+      <canvas id="reportChart"></canvas>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Data Table with Sticky Header and Sortable Columns -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Detailed Records</h2>
+      <span class="text-muted small">{{ report.rows | length }} record(s)</span>
+    </div>
+
+    {% if report.rows %}
+    <div class="table-container table-sticky" style="max-height: 520px;">
+      <table class="table sortable" id="report-table">
+        <thead>
+          <tr>
+            {% for col in report.columns %}
+            <th data-sort="{{ col.key }}" {% if 'amount' in col.key or 'spent' in col.key or 'balance' in col.key or 'pct' in col.key or 'total' in col.key %}class="text-right"{% endif %}>
+              {{ col.label }}
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in report.rows %}
+          <tr>
+            {% for col in report.columns %}
+              {% set val = r.get(col.key) %}
+              {% set k = col.key | lower %}
+              {% set is_money = 'amount' in k or 'spent' in k or 'balance' in k or 'sanctioned' in k or 'funding' in k %}
+              {% set is_pct = 'pct' in k or 'percent' in k or 'ratio' in k %}
+
+              <td {% if is_money or is_pct or 'total' in k or 'count' in k %}class="text-right"{% endif %}>
+                {% if val is none %}
+                  <span class="text-muted">&mdash;</span>
+                {% elif k in ['status', 'project_status', 'milestone_status'] %}
+                  {{ ui.badge(val, val) }}
+                {% elif k == 'rag_status' %}
+                  {% if val == 'Green' %}
+                    <span class="badge badge-success"><span class="badge-dot-indicator"></span>Green</span>
+                  {% elif val == 'Amber' %}
+                    <span class="badge badge-warning"><span class="badge-dot-indicator"></span>Amber</span>
+                  {% elif val == 'Red' %}
+                    <span class="badge badge-danger"><span class="badge-dot-indicator"></span>Red</span>
+                  {% else %}
+                    <span class="badge badge-neutral">{{ val }}</span>
+                  {% endif %}
+                {% elif k == 'health' %}
+                  {% if val == 'Safe' %}
+                    <span class="badge badge-success"><span class="badge-dot-indicator"></span>Safe</span>
+                  {% elif val == 'Caution' %}
+                    <span class="badge badge-warning"><span class="badge-dot-indicator"></span>Caution</span>
+                  {% elif val == 'Critical' %}
+                    <span class="badge badge-danger"><span class="badge-dot-indicator"></span>Critical</span>
+                  {% else %}
+                    <span class="badge badge-neutral">{{ val }}</span>
+                  {% endif %}
+                {% elif is_money %}
+                  <span class="font-mono">{{ val | inr }}</span>
+                {% elif is_pct %}
+                  <span class="font-mono">{{ "%.1f" | format(val | float) }}%</span>
+                {% elif k in ['project_code', 'grant_code', 'voucher_no', 'doi', 'patent_no', 'application_no'] %}
+                  <code>{{ val }}</code>
+                {% else %}
+                  {{ val }}
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      {{ ui.empty_state("No data available", "No records matched your selected filter criteria.", "bar-chart") }}
+    {% endif %}
+  </div>
+</div>
+
+{% if report.chart and report.chart.labels %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const rawChart = {{ report.chart | tojson }};
+    if (!rawChart || !rawChart.labels || !rawChart.labels.length) return;
+
+    RPGMSCharts.register("reportChart", (colors) => {
+      const ctx = document.getElementById("reportChart");
+      if (!ctx) return null;
+
+      const palette = [
+        colors.primary,
+        colors.success,
+        colors.warning,
+        colors.danger,
+        colors.info,
+        "#9333ea",
+        "#06b6d4",
+        "#f97316"
+      ];
+
+      let chartType = rawChart.type;
+      let indexAxis = 'x';
+      let isStacked = false;
+
+      if (chartType === "horizontalBar") {
+        chartType = "bar";
+        indexAxis = 'y';
+      } else if (chartType === "stackedHorizontalBar") {
+        chartType = "bar";
+        indexAxis = 'y';
+        isStacked = true;
+      } else if (chartType === "stackedColumn" || chartType === "stackedBar") {
+        chartType = "bar";
+        isStacked = true;
+      } else if (chartType === "groupedBar") {
+        chartType = "bar";
+      }
+
+      // Format datasets
+      const datasets = (rawChart.datasets || []).map((ds, idx) => {
+        let bg = palette[idx % palette.length];
+        if (chartType === "doughnut" || chartType === "pie") {
+          bg = palette.slice(0, rawChart.labels.length);
+        }
+        return {
+          label: ds.label,
+          data: ds.data,
+          backgroundColor: bg,
+          borderColor: chartType === "line" ? bg : "transparent",
+          borderWidth: chartType === "line" ? 2 : 0,
+          borderRadius: (chartType === "bar") ? 4 : 0,
+          fill: false,
+          tension: 0.2
+        };
+      });
+
+      return new Chart(ctx, {
+        type: chartType,
+        data: {
+          labels: rawChart.labels,
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: indexAxis,
+          scales: (chartType === "doughnut" || chartType === "pie") ? {} : {
+            x: {
+              stacked: isStacked,
+              grid: { color: colors.border },
+              ticks: { color: colors.textMuted }
+            },
+            y: {
+              stacked: isStacked,
+              grid: { color: colors.border },
+              ticks: { color: colors.textMuted }
+            }
+          },
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: { color: colors.text, boxWidth: 12 }
+            }
+          }
+        }
+      });
+    });
+  });
+</script>
+{% endif %}
+{% endblock %}
