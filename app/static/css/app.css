@@ -1203,40 +1203,337 @@ body.sidebar-collapsed .main-wrapper {
    5. PAGES STYLING
    -------------------------------------------------------------------------- */
 
-/* Login Split Layout */
+/* Login Aero-Glass Split Layout */
 .login-page {
   display: flex;
   min-height: 100vh;
+  position: relative;
+  background: radial-gradient(circle at 18% 28%, rgba(30, 58, 138, 0.5) 0%, rgba(15, 23, 42, 0.92) 100%),
+              url('/static/img/login-bg.jpg') center/cover no-repeat fixed;
+  overflow: hidden;
+}
+.login-page::before {
+  content: "";
+  position: absolute;
+  top: -120px;
+  left: 15%;
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.28) 0%, rgba(37, 99, 235, 0.15) 50%, transparent 70%);
+  filter: blur(70px);
+  pointer-events: none;
+  z-index: 1;
+}
+.login-page::after {
+  content: "";
+  position: absolute;
+  bottom: -100px;
+  right: 25%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.25) 0%, rgba(79, 70, 229, 0.15) 50%, transparent 70%);
+  filter: blur(70px);
+  pointer-events: none;
+  z-index: 1;
 }
 .login-brand-panel {
   flex: 1;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-  color: #fff;
-  padding: var(--s8);
+  position: relative;
+  z-index: 2;
+  padding: 56px 48px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  position: relative;
-  overflow: hidden;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.45) 0%, rgba(30, 58, 138, 0.2) 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
 }
 .login-form-panel {
   width: 520px;
-  background: var(--surface);
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--s6);
+  padding: 48px;
+  background: rgba(10, 15, 30, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 .login-card {
   width: 100%;
-  max-width: 380px;
+  max-width: 410px;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  border-radius: 24px;
+  padding: 38px 34px;
+  color: #fff;
+}
+.login-card .form-label {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.login-card .input {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+.login-card .input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+.login-card .input:focus {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.28), 0 0 16px rgba(56, 189, 248, 0.2);
+  outline: none;
+}
+.login-card .btn-primary {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 45%, #0284c7 100%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  font-weight: 600;
+  font-size: 15px;
+  transition: all 0.25s ease;
+}
+.login-card .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 45%, #0ea5e9 100%);
 }
 .demo-accounts-box {
   margin-top: var(--s5);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
   padding: var(--s3);
-  background: var(--surface-2);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+}
+.demo-accounts-box summary {
+  color: rgba(255, 255, 255, 0.75);
+}
+.demo-accounts-box summary:hover {
+  color: #38bdf8;
+}
+.demo-accounts-box code {
+  background: rgba(255, 255, 255, 0.12);
+  color: #7dd3fc;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 11px;
+}
+.demo-pill-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.demo-pill-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+/* Aero-Glass Hero Elements */
+.aeroglass-hero-pill {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Aero-Glass Interactive Dashboard Card */
+.aeroglass-dashboard-card {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45),
+              inset 0 1px 1px rgba(255, 255, 255, 0.35);
+  border-radius: 20px;
+  padding: 24px;
+  margin-top: var(--s4);
+  color: #fff;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.aeroglass-dashboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.55),
+              inset 0 1px 1px rgba(255, 255, 255, 0.45);
+}
+.aeroglass-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.aeroglass-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #34d399;
+  text-transform: uppercase;
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+.aeroglass-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.85);
+}
+.aeroglass-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.aeroglass-stat-box {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+}
+.aeroglass-stat-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.aeroglass-stat-val {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  font-feature-settings: "tnum";
+}
+.aeroglass-stat-sub {
+  font-size: 9.5px;
+  color: #38bdf8;
+  margin-top: 3px;
+  font-weight: 500;
+}
+.aeroglass-spotlight {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.aeroglass-spotlight-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.aeroglass-code {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.15);
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+.aeroglass-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #ffffff;
+}
+.aeroglass-tag {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.aeroglass-progress-wrap {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.aeroglass-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8 0%, #3b82f6 50%, #10b981 100%);
+  border-radius: 999px;
+}
+.aeroglass-spotlight-foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+}
+.aeroglass-tags-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.aeroglass-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+.aeroglass-chip .icon {
+  width: 13px;
+  height: 13px;
+  color: #38bdf8;
 }
 
 /* Dashboard Grid */
@@ -1332,6 +1629,8 @@ body.sidebar-collapsed .main-wrapper {
   }
   .login-form-panel {
     width: 100%;
+    padding: 24px 16px;
+    background: transparent;
   }
 }
 

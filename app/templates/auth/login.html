@@ -5,71 +5,159 @@
 
 {% block content %}
 <div class="login-page">
-  <!-- Brand Panel -->
+  <!-- Brand Panel with Aero-Glass Elements -->
   <div class="login-brand-panel">
-    <div style="display: flex; align-items: center; gap: var(--s3);">
-      <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="RPGMS Logo" style="width: 40px; height: 40px;">
-      <h2 style="font-size: 20px; font-weight: 700; color: #fff;">RPGMS</h2>
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: var(--s3);">
+        <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="RPGMS Logo" style="width: 42px; height: 42px; filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.4));">
+        <div>
+          <h2 style="font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px; line-height: 1;">RPGMS</h2>
+          <span style="font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 500; letter-spacing: 0.3px;">Research Project & Grant Management</span>
+        </div>
+      </div>
+      <span class="aeroglass-pill">v2.4 Enterprise</span>
     </div>
 
-    <div>
-      <h1 class="display" style="color: #fff; margin-bottom: var(--s4); max-width: 440px;">
+    <div style="margin: auto 0; padding: var(--s4) 0;">
+      <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 999px; padding: 4px 14px; margin-bottom: var(--s3); font-size: 12px; font-weight: 600; color: #7dd3fc;">
+        <span class="live-dot" style="background: #38bdf8; box-shadow: 0 0 10px #38bdf8;"></span> Unified Institutional Intelligence
+      </div>
+      <h1 class="display" style="color: #ffffff; font-size: 38px; line-height: 1.15; font-weight: 800; margin-bottom: var(--s4); max-width: 520px; text-shadow: 0 2px 20px rgba(0,0,0,0.5);">
         Every project, grant and publication in one place.
       </h1>
-      <div style="display: flex; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s6);">
-        <span style="background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;">Track budgets</span>
-        <span style="background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;">Watch deadlines</span>
-        <span style="background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;">Measure output</span>
+
+      <div style="display: flex; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s5);">
+        <span class="aeroglass-hero-pill">
+          <svg class="icon" style="color: #38bdf8;"><use href="{{ url_for('static', filename='img/icons.svg') }}#database"/></svg>
+          Track budgets
+        </span>
+        <span class="aeroglass-hero-pill">
+          <svg class="icon" style="color: #34d399;"><use href="{{ url_for('static', filename='img/icons.svg') }}#clock"/></svg>
+          Watch deadlines
+        </span>
+        <span class="aeroglass-hero-pill">
+          <svg class="icon" style="color: #a78bfa;"><use href="{{ url_for('static', filename='img/icons.svg') }}#award"/></svg>
+          Measure output
+        </span>
       </div>
-      <img src="{{ url_for('static', filename='img/login-art.svg') }}" alt="Dashboard Illustration" style="max-width: 100%; border-radius: 12px;">
+
+      <!-- Aero-Glass Live Data Card -->
+      <div class="aeroglass-dashboard-card">
+        <div class="aeroglass-card-header">
+          <div class="aeroglass-live-badge">
+            <span class="live-dot"></span> Active Research Core
+          </div>
+          <span class="aeroglass-pill">MySQL 9.7 · 3NF Engine</span>
+        </div>
+
+        <div class="aeroglass-metrics-grid">
+          <div class="aeroglass-stat-box">
+            <span class="aeroglass-stat-label">Sanctioned</span>
+            <span class="aeroglass-stat-val">₹ 4.82 Cr</span>
+            <span class="aeroglass-stat-sub">SERB · DST · DBT</span>
+          </div>
+          <div class="aeroglass-stat-box">
+            <span class="aeroglass-stat-label">Projects</span>
+            <span class="aeroglass-stat-val">15</span>
+            <span class="aeroglass-stat-sub">6 Departments</span>
+          </div>
+          <div class="aeroglass-stat-box">
+            <span class="aeroglass-stat-label">Utilized</span>
+            <span class="aeroglass-stat-val">81.9%</span>
+            <span class="aeroglass-stat-sub">Strict BR-06 Locks</span>
+          </div>
+          <div class="aeroglass-stat-box">
+            <span class="aeroglass-stat-label">Outputs</span>
+            <span class="aeroglass-stat-val">30 / 7</span>
+            <span class="aeroglass-stat-sub">Pubs / Patents</span>
+          </div>
+        </div>
+
+        <!-- Featured Project Spotlight -->
+        <div class="aeroglass-spotlight">
+          <div class="aeroglass-spotlight-top">
+            <div>
+              <span class="aeroglass-code">RP-2023-001</span>
+              <div class="aeroglass-title">Scalable Edge AI for Sensor Networks</div>
+            </div>
+            <span class="aeroglass-tag">Active</span>
+          </div>
+          <div class="aeroglass-progress-wrap">
+            <div class="aeroglass-progress-bar" style="width: 81.9%;"></div>
+          </div>
+          <div class="aeroglass-spotlight-foot">
+            <span>PI: Dr. Aravind Rao (CSE)</span>
+            <span>₹ 31.1 L / ₹ 38.0 L Disbursed</span>
+          </div>
+        </div>
+
+        <!-- Trust Features -->
+        <div class="aeroglass-tags-row">
+          <span class="aeroglass-chip"><svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#check"/></svg> Strict ACID Concurrency</span>
+          <span class="aeroglass-chip"><svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#shield"/></svg> 4-Role Scoped RBAC</span>
+          <span class="aeroglass-chip"><svg class="icon"><use href="{{ url_for('static', filename='img/icons.svg') }}#file-text"/></svg> Tamper-Proof Audit</span>
+        </div>
+      </div>
     </div>
 
-    <div style="font-size: 12px; color: rgba(255,255,255,0.7);">
-      &copy; University Research Office — Authorized personnel only.
+    <div style="font-size: 12.5px; color: rgba(255,255,255,0.65); display: flex; justify-content: space-between; align-items: center;">
+      <span>&copy; University Research Office — Authorized personnel only.</span>
+      <span style="font-family: var(--font-mono); color: #7dd3fc; font-size: 11px;">Protected by SQL Security Definer</span>
     </div>
   </div>
 
-  <!-- Login Form Panel -->
+  <!-- Login Form Panel with Frosted Glass Card -->
   <div class="login-form-panel">
     <div class="login-card">
-      <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 4px;">Welcome back</h2>
-      <p class="text-muted small" style="margin-bottom: var(--s5);">Sign in to continue to your dashboard</p>
+      <div style="margin-bottom: var(--s4);">
+        <h2 style="font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.4px; margin-bottom: 6px;">Sign In</h2>
+        <p style="color: rgba(255,255,255,0.65); font-size: 13.5px; margin: 0;">Access institutional projects, grants and vouchers</p>
+      </div>
 
       <form action="{{ url_for('auth.login') }}" method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="return_to" value="{{ return_to }}">
 
-        <div class="form-group">
+        <div class="form-group" style="margin-bottom: var(--s3);">
           <label class="form-label" for="username">Username</label>
           <input type="text" class="input" id="username" name="username" required autofocus placeholder="Enter your username" autocomplete="username">
         </div>
 
-        <div class="form-group" style="position: relative;">
+        <div class="form-group" style="position: relative; margin-bottom: var(--s4);">
           <label class="form-label" for="password">Password</label>
           <div style="position: relative;">
             <input type="password" class="input" id="password" name="password" required placeholder="Enter password" autocomplete="current-password" style="padding-right: 40px; width: 100%;">
-            <button type="button" id="toggle-pwd-btn" aria-label="Toggle password visibility" style="position: absolute; right: 10px; top: 10px; background: none; border: none; cursor: pointer; color: var(--text-muted);">
+            <button type="button" id="toggle-pwd-btn" aria-label="Toggle password visibility" style="position: absolute; right: 10px; top: 10px; background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.5);">
               <svg class="icon" style="width: 18px; height: 18px;"><use href="{{ url_for('static', filename='img/icons.svg') }}#info"/></svg>
             </button>
           </div>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: var(--s3); height: 42px;">
-          Sign in
+        <button type="submit" class="btn btn-primary" style="width: 100%; height: 44px; margin-top: var(--s2);">
+          Sign In
         </button>
       </form>
 
       {% if is_demo %}
       <div class="demo-accounts-box">
-        <details>
-          <summary style="font-size: 12.5px; font-weight: 600; cursor: pointer; color: var(--text-muted);">
-            Demo Accounts (Password: <code>password123</code>)
+        <details open>
+          <summary style="font-size: 12.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+            <span>⚡ Demo Accounts (Click to Fill)</span>
+            <span style="font-size: 11px; opacity: 0.7;">Pass: password123</span>
           </summary>
-          <div style="margin-top: var(--s2); font-size: 12px; line-height: 1.6;">
-            <div><strong>ADMIN:</strong> <code>admin</code></div>
-            <div><strong>RESEARCH_OFFICER:</strong> <code>officer</code></div>
-            <div><strong>PI:</strong> <code>pi_rao</code>, <code>pi_menon</code>, <code>pi_sharma</code></div>
-            <div><strong>VIEWER:</strong> <code>viewer</code></div>
+          <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <button type="button" class="demo-pill-btn" onclick="fillDemo('admin', 'password123')">
+              <strong>ADMIN</strong> · admin
+            </button>
+            <button type="button" class="demo-pill-btn" onclick="fillDemo('officer', 'password123')">
+              <strong>OFFICER</strong> · officer
+            </button>
+            <button type="button" class="demo-pill-btn" onclick="fillDemo('pi_rao', 'password123')">
+              <strong>PI</strong> · pi_rao
+            </button>
+            <button type="button" class="demo-pill-btn" onclick="fillDemo('viewer', 'password123')">
+              <strong>VIEWER</strong> · viewer
+            </button>
           </div>
         </details>
       </div>
@@ -87,6 +175,16 @@
     toggleBtn.addEventListener("click", () => {
       pwdInput.type = pwdInput.type === "password" ? "text" : "password";
     });
+  }
+
+  function fillDemo(user, pwd) {
+    const userInput = document.getElementById("username");
+    const passInput = document.getElementById("password");
+    if (userInput && passInput) {
+      userInput.value = user;
+      passInput.value = pwd;
+      userInput.focus();
+    }
   }
 </script>
 {% endblock %}
